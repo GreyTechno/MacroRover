@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirect Page</title>
+    <script>
+        // Function to get cookie by name
+        function getCookie(name) {
+            let nameEQ = name + "=";
+            let cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.indexOf(nameEQ) == 0) return cookie.substring(nameEQ.length, cookie.length);
+            }
+            return null;
+        }
+
+        // Check if the _user_id_ cookie exists
+        window.onload = function () {
+            let userId = getCookie("_user_id_");
+            if (userId) {
+                // If the _user_id_ cookie is found, redirect to dashboard.html
+                window.location.href = "../Dashboard/dashboard.html";
+            } else {
+                // If the _user_id_ cookie is not found, redirect to SignupGoogleButton.html
+                window.location.href = "../Continue With Google Page + Signup Page & Login Page/SignupGoogleButton.html";
+            }
+        }
+
+    </script>
+</head>
+
+<body>
+</body>
+
+</html>

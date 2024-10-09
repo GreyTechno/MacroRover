@@ -1,0 +1,64 @@
+<!-- SignupGoogleButton.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login with Google</title>
+</head>
+
+<body>
+    <h1>Login with Google or Email</h1>
+
+    <button id="loginBtn">Continue with Google</button>
+    <button id="emailBtn">Continue with Email</button> <!-- New Button -->
+
+    <script>
+        var api_url = "https://1c54e2ee-88a8-48fb-a3ef-887afa4bf6ae-00-13he0ux6uthb3.pike.replit.dev"
+        /**
+         * Generates a random token consisting of uppercase, lowercase letters, and numbers.
+         * @param {number} length - The length of the token to generate.
+         * @returns {string} - The generated random token.
+         */
+        function generateRandomToken(length) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let token = '';
+            for (let i = 0; i < length; i++) {
+                token += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return token;
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const loginBtn = document.getElementById("loginBtn");
+            const emailBtn = document.getElementById("emailBtn"); // Reference to the email button
+            const loginRedirectBtn = document.getElementById("loginRedirectBtn"); // Reference to the new login button
+
+            // Handle Google login button click
+            if (loginBtn) {
+                loginBtn.addEventListener("click", function () {
+                    const randomToken = generateRandomToken(40);
+
+                    const authWindow = window.open(
+                        `${api_url}/ContinueWithGoogleAPI/?token=${randomToken}`,
+                        "authWindow",
+                        "width=500,height=600"
+                    );
+
+                    window.location.href = `SignupGoogleLoadingPage.html?token=${randomToken}`;
+                });
+            }
+
+            // Handle Email login button click
+            if (emailBtn) {
+                emailBtn.addEventListener("click", function () {
+                    window.location.href = 'LoginWithEmail.html';
+                });
+            }
+
+        });
+    </script>
+</body>
+
+</html>

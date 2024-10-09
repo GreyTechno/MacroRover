@@ -1,0 +1,7 @@
+SignupGoogleLoadingPage.html > configure the api url
+SignupGoogleButton.html > configure the api url
+SignupWithEmail-CheckConfirmationCodeSendOrNot.html > configure the api url
+LoginWithEmail.html > configure the api url
+LoginWithEmail-VerifyPassword.html > configure the api url
+LoginPage.html > configure the api url
+Dashboard/dashboard.html > configure the api url

@@ -1,0 +1,54 @@
+<!-- SignupWithEmail.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup with Email</title>
+</head>
+<body>
+    <h1>Signup with Email</h1>
+
+    <!-- Email Input Field -->
+    <label for="email">Enter Your Email:</label>
+    <input type="text" id="email" name="email" placeholder="Enter your email">
+
+    <br><br>
+
+    <!-- Submit Button for Email -->
+    <button id="emailSubmit">Submit Email</button>
+
+    <script>
+        // Function to validate email format using regex
+        function validateEmail(email) {
+            const re = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            return re.test(email);
+        }
+
+        // Function to set a cookie with the specified name and value
+        function setCookie(name, value, days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));  // Cookie expiry in days
+            const expires = "expires=" + date.toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
+
+        // Event listener for the submit button
+        document.getElementById('emailSubmit').addEventListener('click', function() {
+            const email = document.getElementById('email').value;
+
+            // Validate the email format
+            if (validateEmail(email)) {
+                // Set the cookie 'user_entered_email_while_signup' with the entered email and expiry of 7 days
+                setCookie('user_entered_email_while_signup', email, 7);
+                
+                // Redirect to the password page
+                window.location.href = 'SignupWithEmail-GetPassword.html';
+            } else {
+                // Alert if the email is invalid
+                alert('Please enter a valid email address.');
+            }
+        });
+    </script>
+</body>
+</html>

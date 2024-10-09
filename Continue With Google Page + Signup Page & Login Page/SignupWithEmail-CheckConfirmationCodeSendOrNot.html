@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Confirmation Code Send or Not</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+</head>
+
+<body>
+    <h1>Check Confirmation Code Send Status</h1>
+    <div id="message" style="color: red;"></div>
+
+    <script>
+        var api_url = "https://1c54e2ee-88a8-48fb-a3ef-887afa4bf6ae-00-13he0ux6uthb3.pike.replit.dev"
+        // Function to set a cookie
+        function setCookie(name, value, days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = "expires=" + date.toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
+
+        // Function to get cookie by name
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // Generate a random token
+        const token = CryptoJS.lib.WordArray.random(16).toString();
+
+        // Get the email and hashed password from cookies
+        const email = getCookie('user_entered_email_while_signup');
+        const hashedPassword = getCookie('signup_password');
+
+        if (!email || !hashedPassword) {
+            document.getElementById('message').textContent = "Error: Required information not found.";
+        } else {
+            // Send a request to the Python server
+            fetch(api_url + '/SignupWithEmail/send_confirmation_code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: email,
+                    token: token,
+                    hashed_password: hashedPassword
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const messageDiv = document.getElementById('message');
+
+                    if (data.success) {
+                        // Check if the token matches
+                        if (data.token === token) {
+                            // Save the hashed confirmation code in a cookie
+                            setCookie('confirmation_code', data.hashed_code, 7);  // Save the hashed code
+
+                            messageDiv.textContent = "Email sent successfully. Confirmation code saved!";
+                            // Redirect to SignupWithEmail-VerifyEmail.html after 2 seconds
+                            setTimeout(() => {
+                                window.location.href = 'SignupWithEmail-VerifyEmail.html';
+                            }, 2000); // Delay of 2 seconds before redirecting
+                        } else {
+                            messageDiv.textContent = "Error: Token mismatch.";
+                        }
+                    } else {
+                        messageDiv.textContent = `Error: ${data.message}`;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('message').textContent = "Error: Failed to send request.";
+                    console.error('Error:', error);
+                });
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email</title>
+</head>
+<body>
+    <h1>Verify Your Email</h1>
+
+    <form id="confirmation-form">
+        <label for="confirmation-code">Enter the 6-digit confirmation code:</label>
+        <input type="number" id="confirmation-code" name="confirmation-code" required>
+        <button type="submit">Verify</button>
+    </form>
+
+    <div id="message" style="color: red;"></div>
+
+    <script>
+        // Function to get cookie by name
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // Function to set a cookie
+        function setCookie(name, value, days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = "expires=" + date.toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
+
+        // Function to delete a specific cookie
+        function deleteCookie(name) {
+            document.cookie = name + "=; Max-Age=-99999999; path=/";
+        }
+
+        // Function to delete all cookies except '_user_id_'
+        function deleteAllCookiesExceptUserID() {
+            const cookies = document.cookie.split("; ");
+            cookies.forEach(cookie => {
+                const cookieName = cookie.split("=")[0];
+                if (cookieName !== "_user_id_") {
+                    deleteCookie(cookieName);
+                }
+            });
+        }
+
+        // Handle form submission
+        document.getElementById('confirmation-form').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent form from submitting normally
+
+            const enteredCode = document.getElementById('confirmation-code').value;
+            const storedHashedCode = getCookie('confirmation_code');
+            const signupPassword = getCookie('signup_password');
+            const userEnteredEmail = getCookie('user_entered_email_while_signup');
+
+            if (!enteredCode || !storedHashedCode || !signupPassword || !userEnteredEmail) {
+                document.getElementById('message').textContent = "Error: Missing required data.";
+                return;
+            }
+
+            // Send the entered code, stored hashed code, password, and email to the Python server
+            fetch('http://localhost:5051/SignupWithEmail/verify_confirmation_code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    entered_code: enteredCode,
+                    hashed_code: storedHashedCode,
+                    signup_password: signupPassword,
+                    email: userEnteredEmail
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const messageDiv = document.getElementById('message');
+
+                if (data.success) {
+                    // Set the user ID in a cookie with the key "_user_id_"
+                    setCookie('_user_id_', data.user_id, 7);  // Save for 7 days
+
+                    // Delete all cookies except for "_user_id_"
+                    deleteAllCookiesExceptUserID();
+
+                    window.location.href = "../this fie will decide what to user show/investigator.html";
+                } else {
+                    // Show error message
+                    messageDiv.textContent = "Error: Incorrect confirmation code or other data.";
+                }
+            })
+            .catch(error => {
+                document.getElementById('message').textContent = "Error: Failed to send request.";
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+</html>

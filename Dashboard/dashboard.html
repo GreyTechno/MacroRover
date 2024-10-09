@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script>
+        var api_url = "https://1c54e2ee-88a8-48fb-a3ef-887afa4bf6ae-00-13he0ux6uthb3.pike.replit.dev"
+        // Function to get cookie by name
+        function getCookie(name) {
+            let nameEQ = name + "=";
+            let cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.indexOf(nameEQ) == 0) {
+                    return cookie.substring(nameEQ.length, cookie.length);
+                }
+            }
+            return null;
+        }
+
+        // Function to set a cookie with a name and value
+        function setCookie(name, value, days) {
+            let expires = "";
+            if (days) {
+                let date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "") + expires + "; path=/";
+        }
+
+        // Send user ID to the Python server and handle the response
+        function sendUserIdToServer(userId) {
+            fetch(api_url + '/Dashboard/get_webhook_urls', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({user_id: userId})
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // If webhook URLs are available, format and save in a cookie
+                        let webhookUrls = data.webhook_url;
+                        let formattedUrls = "|" + webhookUrls.join("|") + "|"; // Format like "|abc|def|hij|"
+                        setCookie("webhook_urls", formattedUrls, 7); // Save for 7 days
+
+                        // Redirect to "Dashboard-Show-Webhook-Url.html"
+                        window.location.href = "Dashboard-Show-Webhook-Url.html";
+                    } else {
+                        // If no webhook URL, redirect to "Dashboard-Macro-Installer.html"
+                        window.location.href = "Dashboard-Macro-Installer.html";
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        // On page load, get the _user_id_ cookie and send to the server
+        window.onload = function () {
+            let userId = getCookie("_user_id_");
+            if (userId) {
+                // Send the user ID to the server if it exists
+                sendUserIdToServer(userId);
+            } else {
+                console.error('No _user_id_ cookie found.');
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <h1>Loading your dashboard...</h1>
+</body>
+
+</html>

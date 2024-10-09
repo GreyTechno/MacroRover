@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selected Device Control</title>
+  <script>
+
+    let Ntfy_Token = getCookie("ntfy_subcribe_token");
+    let selected_device = getCookie("selected_device");
+
+    // Function to get a cookie by name
+    function getCookie(name) {
+        let nameEQ = name + "=";
+        let cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            let cookie = cookies[i].trim();
+            if (cookie.indexOf(nameEQ) == 0) {
+                return cookie.substring(nameEQ.length, cookie.length);
+            }
+        }
+        return null;
+    }
+    
+    function GetRecentMessageFromNtfy(selectedDevice, Ntfy_Token, command_intent_trigger_code, filterKeyword) {
+      function isMessageWithinLastMinutes(messageTime, minutes) {
+        const currentTime = new Date();
+        const messageDate = new Date(messageTime * 1000); // Convert to milliseconds
+        const timeDiffInMs = currentTime - messageDate;
+        return Math.floor(timeDiffInMs / (1000 * 60)) <= minutes;
+      }
+
+      function get_ntfy_messages(topic, minutes, filterKeyword = "") {
+        const apiUrl = `https://ntfy.sh/${topic}/json?poll=1&sched=1`;
+
+        return fetch(apiUrl)
+          .then(response => response.text())
+          .then(data => {
+            const messages = [];
+            const lines = data.trim().split("\n");
+
+            lines.forEach(line => {
+              try {
+                const jsonData = JSON.parse(line);
+                if (isMessageWithinLastMinutes(jsonData.time, minutes)) {
+                  if (filterKeyword && jsonData.message.includes(filterKeyword)) {
+                    messages.push(jsonData);
+                  }
+                }
+              } catch (error) {
+                console.error("Error parsing line:", line, error);
+              }
+            });
+
+            return messages;
+          })
+          .catch(error => {
+            console.error("Error fetching data:", error);
+          });
+      }
+
+      function send_alert_to_selected_device(selectedDevice, Ntfy_Token, command_intent_trigger_code) {
+        if (selectedDevice && Ntfy_Token) {
+          let fullUrl = `https://trigger.macrodroid.com/${selectedDevice}/_init_?NtfyCallerTopic_ForOnlineDevice=${Ntfy_Token}&Command_Init=${command_intent_trigger_code}`;
+
+          fetch(fullUrl)
+            .then(response => response.ok ? response.json() : console.error(`Failed to fetch from ${fullUrl}`))
+            .then(data => console.log(`Response from ${fullUrl}:`, data))
+            .catch(error => console.error(`Error fetching ${fullUrl}:`, error));
+        } else {
+          console.error('Selected device or Ntfy token not found.');
+        }
+      }
+
+      function subscribeToNtfyTopic(topic) {
+        const socket = new WebSocket(`wss://ntfy.sh/${topic}/ws`);
+        socket.addEventListener('message', function (event) {
+          console.log("Message received from Ntfy:", event.data);
+          try {
+            const jsonData = JSON.parse(event.data);
+            if (jsonData.message.includes("device_condition_true")) {
+              displayDeviceStatus([jsonData]);
+            }
+          } catch (error) {
+            console.error("Error parsing WebSocket message:", error);
+          }
+        });
+
+        socket.addEventListener('error', function (error) {
+          console.error("WebSocket error:", error);
+        });
+
+        socket.addEventListener('close', function () {
+          console.log("WebSocket connection closed.");
+        });
+      }
+
+      function displayDeviceStatus(messages) {
+        const formattedMessages = messages.map(message => `${message.message}`);
+        return formattedMessages;
+      }
+
+    //   let selectedDevice = "919e25c3-3612-4b09-bd1d-3f3fd22a0e21";
+    //   let Ntfy_Token = "example_token";
+    //   let command_intent_trigger_code = "send_device_status_to_the_server";
+    //   const filterKeyword = "device_condition_true";
+
+      if (selectedDevice && Ntfy_Token) {
+        send_alert_to_selected_device(selectedDevice, Ntfy_Token, command_intent_trigger_code);
+        subscribeToNtfyTopic(Ntfy_Token);
+
+        return get_ntfy_messages(Ntfy_Token, 2, filterKeyword)
+          .then(messages => {
+            const recentMessage = messages.reduce((latest, message) => 
+              !latest || message.time > latest.time ? message : latest, null);
+
+            if (recentMessage) {
+              const formattedMessages = displayDeviceStatus([recentMessage]);
+              return formattedMessages;
+            } else {
+              console.log("No messages found.");
+              return [];
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching Ntfy messages:', error);
+            return [];
+          });
+      } else {
+        console.error('Selected device or Ntfy token not found.');
+        return [];
+      }
+    }
+
+    function Display(message) {
+        const deviceStatusList = document.getElementById("device-status");
+        deviceStatusList.innerHTML = ""; // Clear the existing list
+
+        // Split the message by "|!|"
+        const parts = message.split("|!|");
+
+        // Check if the split result has enough parts
+        if (parts.length >= 50) { // Adjust the number based on the number of expected parts
+            const details = {
+                "Battery Percentage ": parts[1],
+                "Device Mode": parts[2],
+                "Webhook Url": parts[3],
+                "Foreground App Name": parts[4],
+                "Foreground App Package": parts[5],
+                "Current Brightness": parts[6],
+                "Screen Timeout (Seconds)": parts[7],
+                "Battery Temperature": parts[8],
+                "Battery Current Now (mA)": parts[9],
+                "Power Now (On/Off)": parts[10],
+                "Clipboard Text": parts[11],
+                "Current IP": parts[12],
+                "Current IP v6": parts[13],
+                "WiFi SSID": parts[14],
+                "WiFi Signal Strength": parts[15],
+                "Cell Tower Signal Strength": parts[16],
+                "System Time": parts[17],
+                "System Time (ms)": parts[18],
+                "Language Code": parts[19],
+                "Country Code": parts[20],
+                "Cell Connection Type": parts[21],
+                "Mobile Country Code": parts[22],
+                "Mobile Network Code": parts[23],
+                "Location Area Code": parts[24],
+                "Cell ID": parts[25],
+                "Current Volume (Alarm)": parts[26],
+                "Current Volume (Media)": parts[27],
+                "Current Volume (Ringer)": parts[28],
+                "Current Volume (Notification)": parts[29],
+                "Current Volume (System Sound)": parts[30],
+                "Current Volume (Voice Call)": parts[31],
+                "Current Volume (Bluetooth Voice)": parts[32],
+                "Macro Name": parts[33],
+                "Macro Category": parts[34],
+                "Device Name": parts[35],
+                "Device Manufacturer": parts[36],
+                "Device Model": parts[37],
+                "MacroDroid Version": parts[38],
+                "MacroDroid Pro Status": parts[39],
+                "Android Version": parts[40],
+                "Android Version SDK Level": parts[41],
+                "SIM 1 Operator Name": parts[42],
+                "SIM 2 Operator Name": parts[43],
+                "Screen Resolution": parts[44],
+                "RAM Total": parts[45],
+                "RAM Available": parts[46],
+                "Storage Total (External)": parts[47],
+                "Storage Free (External)": parts[48],
+                "Storage Total (Internal)": parts[49],
+                "Storage Free (Internal)": parts[50]
+            };
+
+            // Loop through each key-value pair in the details dictionary and create list items
+            Object.entries(details).forEach(([key, value]) => {
+                const listItem = document.createElement("li");
+                listItem.textContent = `${key}: ${value}`;
+                deviceStatusList.appendChild(listItem);
+            });
+        } else {
+            // Handle error if the message format is unexpected
+            console.error("Message format is invalid or incomplete:", message);
+        }
+    }
+
+
+
+
+
+    window.onload = function () {
+        GetRecentMessageFromNtfy(
+            selected_device,
+            Ntfy_Token,
+            "send_device_status_to_the_server",
+            "device_condition_true"
+        )
+            .then(messages => {
+                if (messages.length === 0) {
+                    // No recent messages found, show alert and reload the page
+                    alert("No recent messages found. Please reload the page.");
+                    location.reload(); // Reloads the page
+                } else {
+                    // If messages are found, display the first message
+                    const data = messages[0]; // Assuming you want to display the first message
+                    Display(data);
+                }
+            })
+            .catch(error => {
+                // Handle error while fetching messages
+                console.error("Error fetching messages:", error);
+                alert("An error occurred while fetching messages. Please reload the page.");
+                location.reload(); // Reloads the page in case of error
+            });
+    };
+
+
+  </script>
+</head>
+
+<body>
+  <h1>Selected Device Status/Condition</h1>
+  <ul id="device-status"></ul>
+</body>
+
+</html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Start Controlling</title>
+    <script>
+        function redirectToNewPage(FeaturesAction) {
+            window.location.href = `${FeaturesAction}`;
+        }
+    </script>
+</head>
+<body>
+    <h1>Start Controlling Devices</h1>
+    
+    <ul>
+        <!-- Dynamically generated buttons for 30+ devices -->
+        <li><button onclick="redirectToNewPage('Feature/device_status.html')">Device Status</button></li><br>
+        <li><button onclick="redirectToNewPage('Feature/get_live_location.html')">Live Location</button></li><br>
+    </ul>
+
+</body>
+</html>

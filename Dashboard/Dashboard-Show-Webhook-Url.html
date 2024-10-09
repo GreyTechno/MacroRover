@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook URLs</title>
+    <script>
+        // Function to get a cookie by name
+        function getCookie(name) {
+            let nameEQ = name + "=";
+            let cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.indexOf(nameEQ) == 0) {
+                    return cookie.substring(nameEQ.length, cookie.length);
+                }
+            }
+            return null;
+        }
+
+        function generateRandomToken(length) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+            let token = '';
+            for (let i = 0; i < length; i++) {
+                token += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return token;
+        }
+        // Function to set a cookie
+        function setCookie(name, value, days) {
+            const d = new Date();
+            d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = "expires=" + d.toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
+
+        // Function to display webhook URLs from the cookie
+        function displayWebhookUrls() {
+            let webhookUrlsCookie = getCookie("webhook_urls");
+            if (webhookUrlsCookie) {
+                let webhookUrls = webhookUrlsCookie.split('|').filter(url => url); // Split and filter out empty strings
+                let ulElement = document.getElementById('webhook-list');
+                
+                // Loop through each URL and add it to the list
+                webhookUrls.forEach(url => {
+                    let li = document.createElement('li');
+                    li.textContent = url;
+                    ulElement.appendChild(li);
+                });
+            } else {
+                // If no cookie is found, show a message
+                document.getElementById('message').textContent = "No webhook URLs found.";
+            }
+        }
+
+        // Function to handle the button click and redirect to get online devices
+        function redirectToOnlineDevices() {
+            window.location.href = "Dashboard-Get-Online-Devices.html";
+        }
+
+        // On page load, display webhook URLs
+        window.onload = function() {
+            displayWebhookUrls();
+            setCookie("ntfy_subcribe_token", generateRandomToken(10), 16);
+        }
+    </script>
+</head>
+<body>
+    <h1>Webhook URLs Found</h1>
+    <ul id="webhook-list"></ul>
+    <p id="message"></p>
+    <button onclick="redirectToOnlineDevices()">Get Available Online Devices</button>
+</body>
+</html>

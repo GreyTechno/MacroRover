@@ -1,0 +1,68 @@
+<!-- SignupGoogleButton.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login with Google</title>
+</head>
+
+<body>
+    <h1>Login with Google or Email</h1>
+
+    <button id="loginBtn">Continue with Google</button>
+    <button id="emailBtn">Continue with Email</button> <!-- New Button -->
+
+    <!-- New Login Button -->
+    <button id="loginRedirectBtn">Login</button> <!-- New Button for Login -->
+
+    <script>
+        var api_url = "https://1c54e2ee-88a8-48fb-a3ef-887afa4bf6ae-00-13he0ux6uthb3.pike.replit.dev"
+        function generateRandomToken(length) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let token = '';
+            for (let i = 0; i < length; i++) {
+                token += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return token;
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const loginBtn = document.getElementById("loginBtn");
+            const emailBtn = document.getElementById("emailBtn"); // Reference to the email button
+            const loginRedirectBtn = document.getElementById("loginRedirectBtn"); // Reference to the new login button
+
+            // Handle Google login button click
+            if (loginBtn) {
+                loginBtn.addEventListener("click", function () {
+                    const randomToken = generateRandomToken(40);
+
+                    const authWindow = window.open(
+                        `${api_url}/ContinueWithGoogleAPI/?token=${randomToken}`,
+                        "authWindow",
+                        "width=500,height=600"
+                    );
+
+                    window.location.href = `SignupGoogleLoadingPage.html?token=${randomToken}`;
+                });
+            }
+
+            // Handle Email login button click
+            if (emailBtn) {
+                emailBtn.addEventListener("click", function () {
+                    window.location.href = 'SignupWithEmail.html';
+                });
+            }
+
+            // Handle Login button click to redirect to a new page with the text "hello"
+            if (loginRedirectBtn) {
+                loginRedirectBtn.addEventListener("click", function () {
+                    window.location.href = 'LoginPage.html';
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

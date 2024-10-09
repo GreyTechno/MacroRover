@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selected Device Control</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    #map {
+      height: 400px;
+      width: 100%;
+    }
+  </style>
+
+  <script>
+    let Ntfy_Token = getCookie("ntfy_subcribe_token");
+    let selected_device = getCookie("selected_device");
+
+    // Function to get a cookie by name
+    function getCookie(name) {
+      let nameEQ = name + "=";
+      let cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.indexOf(nameEQ) == 0) {
+          return cookie.substring(nameEQ.length, cookie.length);
+        }
+      }
+      return null;
+    }
+
+    function GetRecentMessageFromNtfy(selectedDevice, Ntfy_Token, command_intent_trigger_code, filterKeyword) {
+      function isMessageWithinLastMinutes(messageTime, minutes) {
+        const currentTime = new Date();
+        const messageDate = new Date(messageTime * 1000); // Convert to milliseconds
+        const timeDiffInMs = currentTime - messageDate;
+        return Math.floor(timeDiffInMs / (1000 * 60)) <= minutes;
+      }
+
+      function get_ntfy_messages(topic, minutes, filterKeyword = "") {
+        const apiUrl = `https://ntfy.sh/${topic}/json?poll=1&sched=1`;
+
+        return fetch(apiUrl)
+          .then(response => response.text())
+          .then(data => {
+            const messages = [];
+            const lines = data.trim().split("\n");
+
+            lines.forEach(line => {
+              try {
+                const jsonData = JSON.parse(line);
+                if (isMessageWithinLastMinutes(jsonData.time, minutes)) {
+                  if (filterKeyword && jsonData.message.includes(filterKeyword)) {
+                    messages.push(jsonData);
+                  }
+                }
+              } catch (error) {
+                console.error("Error parsing line:", line, error);
+              }
+            });
+
+            return messages;
+          })
+          .catch(error => {
+            console.error("Error fetching data:", error);
+          });
+      }
+
+      function send_alert_to_selected_device(selectedDevice, Ntfy_Token, command_intent_trigger_code) {
+        if (selectedDevice && Ntfy_Token) {
+          let fullUrl = `https://trigger.macrodroid.com/${selectedDevice}/_init_?NtfyCallerTopic_ForOnlineDevice=${Ntfy_Token}&Command_Init=${command_intent_trigger_code}`;
+
+          fetch(fullUrl)
+            .then(response => response.ok ? response.json() : console.error(`Failed to fetch from ${fullUrl}`))
+            .then(data => console.log(`Response from ${fullUrl}:`, data))
+            .catch(error => console.error(`Error fetching ${fullUrl}:`, error));
+        } else {
+          console.error('Selected device or Ntfy token not found.');
+        }
+      }
+
+      if (selectedDevice && Ntfy_Token) {
+        send_alert_to_selected_device(selectedDevice, Ntfy_Token, command_intent_trigger_code);
+
+        return get_ntfy_messages(Ntfy_Token, 2, filterKeyword)
+          .then(messages => {
+            const recentMessage = messages.reduce((latest, message) =>
+              !latest || message.time > latest.time ? message : latest, null);
+
+            if (recentMessage) {
+              return recentMessage;
+            } else {
+              console.log("No messages found.");
+              return null;
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching Ntfy messages:', error);
+            return null;
+          });
+      } else {
+        console.error('Selected device or Ntfy token not found.');
+        return null;
+      }
+    }
+    var firstUpdate = true;  // Flag to track the first update
+
+    // Initialize map and marker outside the fetch loop
+    let map, marker;
+    function initializeMap(latitude, longitude) {
+      map = L.map('map').setView([latitude, longitude], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap'
+      }).addTo(map);
+
+      marker = L.marker([latitude, longitude]).addTo(map);
+    }
+
+    function updateMapLocation(latitude, longitude) {
+      map.setView([latitude, longitude], map.getZoom());
+      marker.setLatLng([latitude, longitude]);
+    }
+
+    function fetchAndUpdateLocation() {
+      GetRecentMessageFromNtfy(
+        selected_device,
+        Ntfy_Token,
+        "send_live_location_to_the_server",
+        "live_location_true"
+      )
+        .then(recentMessage => {
+          if (!recentMessage) {
+            console.log("No recent messages found.");
+          } else {
+            // Extract latitude and longitude from the message
+            const data = recentMessage.message.split("|!|");
+            const latitude = parseFloat(data[1]);
+            const longitude = parseFloat(data[2]);
+
+            // If the map is initialized, just update location, otherwise initialize
+            if (map && marker) {
+              updateMapLocation(latitude, longitude);
+            } else {
+              initializeMap(latitude, longitude);
+            }
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching messages:", error);
+        });
+    }
+
+    window.onload = function () {
+      // Call the function once at the beginning
+      fetchAndUpdateLocation();
+
+      // Set interval to call the function every 5 seconds (5000 milliseconds)
+      setInterval(fetchAndUpdateLocation, 5000);
+    };
+  </script>
+</head>
+
+<body>
+  <h1>Live Location Of Your Device</h1>
+  <div id="map"></div> <!-- Map container -->
+</body>
+
+</html>

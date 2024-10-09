@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Devices</title>
+    <script>
+
+        let Ntfy_Token = getCookie("ntfy_subcribe_token");
+
+        // Function to set a cookie
+        function setCookie(name, value, days) {
+            const d = new Date();
+            d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = "expires=" + d.toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
+
+        
+        // Function to get a cookie by name
+        function getCookie(name) {
+            let nameEQ = name + "=";
+            let cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.indexOf(nameEQ) == 0) {
+                    return cookie.substring(nameEQ.length, cookie.length);
+                }
+            }
+            return null;
+        }
+
+        function generateRandomToken(length) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+            let token = '';
+            for (let i = 0; i < length; i++) {
+                token += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return token;
+        }
+
+        function isMessageWithinLastMinutes(messageTime, minutes) {
+            const currentTime = new Date();
+            const messageDate = new Date(messageTime * 1000); // Convert to milliseconds
+            const timeDiffInMs = currentTime - messageDate;
+            const timeDiffInMin = Math.floor(timeDiffInMs / (1000 * 60));
+            return timeDiffInMin <= minutes;
+        }
+
+        function get_ntfy_messages(topic, minutes, filterKeyword = "") {
+            const apiUrl = `https://ntfy.sh/${topic}/json?poll=1&sched=1`;
+
+            return fetch(apiUrl)
+                .then(response => response.text())
+                .then(data => {
+                    const messages = [];
+                    const lines = data.trim().split("\n");
+
+                    lines.forEach(line => {
+                        try {
+                            const jsonData = JSON.parse(line);
+                            const messageTime = jsonData.time;
+
+                            if (isMessageWithinLastMinutes(messageTime, minutes)) {
+                                if (filterKeyword) {
+                                    if (jsonData.message.includes(filterKeyword)) {
+                                        messages.push(jsonData);
+                                    }
+                                } else {
+                                    messages.push(jsonData);
+                                }
+                            }
+                        } catch (error) {
+                            console.error("Error parsing line:", line, error);
+                        }
+                    });
+
+                    return messages;
+                })
+                .catch(error => {
+                    console.error("Error fetching data:", error);
+                });
+        }
+
+        function processMessage(jsonData) {
+            return jsonData.split('|!|');
+        }
+
+
+        function Send_alert_to_all_devices_for_attendence() {
+            let webhookUrlsCookie = getCookie("webhook_urls");
+            let userId = getCookie("_user_id_");
+
+            if (webhookUrlsCookie) {
+                let webhookUrls = webhookUrlsCookie.split('|').filter(url => url);
+                webhookUrls.forEach(url => {
+                    let fullUrl = `https://trigger.macrodroid.com/${url}/_init_?NtfyCallerTopic_ForOnlineDevice=${Ntfy_Token}&Command_Init=this_device_is_online`;
+
+                    fetch(fullUrl)
+                        .then(response => {
+                            if (response.ok) {
+                                return response.json();
+                            } else {
+                                console.error(`Failed to fetch from ${fullUrl}`);
+                            }
+                        })
+                        .then(data => {
+                            console.log(`Response from ${fullUrl}:`, data);
+                        })
+                        .catch(error => {
+                            console.error(`Error fetching ${fullUrl}:`, error);
+                        });
+                });
+            } else {
+                console.error('No webhook URLs found in the cookie.');
+            }
+        }
+
+        function subscribeToNtfyTopic(topic) {
+            const socket = new WebSocket(`wss://ntfy.sh/${topic}/ws`);
+            socket.addEventListener('message', function (event) {
+                console.log(event.data);
+            });
+        }
+
+        let OnlineDevicesUUID = [];
+
+        function displayDevices() {
+            const deviceList = document.getElementById("device-status");
+            deviceList.innerHTML = ""; // Clear the existing list
+
+            OnlineDevicesUUID.forEach(deviceUUID => {
+                const listItem = document.createElement("li");
+                const button = document.createElement("button");
+
+                listItem.textContent = deviceUUID;
+                button.textContent = "Start Controlling";
+                button.onclick = function() {
+                    // Set a cookie with the selected device UUID
+                    setCookie("selected_device", deviceUUID, 1);
+                    // Redirect to the new page after selecting a device
+                    window.location.href = "Dashboard-Start-ConrolingTheDevice.html";
+                };
+
+                listItem.appendChild(button);
+                deviceList.appendChild(listItem);
+            });
+        }
+
+        window.onload = function() {
+            let userId = getCookie("_user_id_");
+            if (userId) {
+                filterKeyword = "online_status_true";
+                Send_alert_to_all_devices_for_attendence();
+                console.log("NTFY Token: ", Ntfy_Token);
+                subscribeToNtfyTopic(Ntfy_Token);
+
+                let webhookUrlsCookie = getCookie("webhook_urls");
+                let webhookUrls = webhookUrlsCookie ? webhookUrlsCookie.split('|').filter(url => url) : [];
+                const webhookCount = webhookUrls.length;
+
+                let targetDeviceCount = webhookCount > 10 ? 10 : webhookCount;
+                let waitTime = 60000; 
+                let intervalId;
+
+                if (webhookCount > 0) {
+                    intervalId = setInterval(function() {
+                        console.log("Fetching messages...");
+                        get_ntfy_messages(Ntfy_Token, 2, filterKeyword).then(messages => {
+                            messages.forEach(message => {
+                                let online_device = processMessage(message.message)[1];
+                                console.log("Processed message: ", online_device);
+
+                                if (online_device.includes('https://trigger.macrodroid.com/')) {
+                                    let deviceUUID = online_device.split('https://trigger.macrodroid.com/')[1].replace('/', '');
+                                    console.log("Extracted Device UUID: ", deviceUUID);
+
+                                    webhookUrls.forEach(url => {
+                                        if (url.includes(deviceUUID)) {
+                                            if (!OnlineDevicesUUID.includes(deviceUUID)) {
+                                                OnlineDevicesUUID.push(deviceUUID);
+                                                console.log(`Device UUID ${deviceUUID} is online and stored.`);
+                                            }
+                                        } else {
+                                            console.log(`Device UUID ${deviceUUID} not found in ${url}`);
+                                        }
+                                    });
+                                } else {
+                                    console.log("No valid online device found in message.");
+                                }
+
+                                if (OnlineDevicesUUID.length >= targetDeviceCount) {
+                                    clearInterval(intervalId);
+                                    alert(`Found required number of devices: ${OnlineDevicesUUID.join(", ")}`);
+                                    displayDevices();
+                                }
+                            });
+                        });
+                    }, 5000);
+
+                    setTimeout(function() {
+                        clearInterval(intervalId);
+                        alert(`No more devices found within the time frame. Devices found: ${OnlineDevicesUUID.join(", ")}`);
+                        displayDevices();
+                    }, waitTime);
+                } else {
+                    console.error('No webhook URLs found in the cookie.');
+                }
+            } else {
+                console.error('No _user_id_ cookie found.');
+            }
+        };
+
+    </script>
+</head>
+<body>
+    <h1>Fetching Online Devices...</h1>
+    <ul id="device-status"></ul> <!-- List to display online devices -->
+</body>
+</html>

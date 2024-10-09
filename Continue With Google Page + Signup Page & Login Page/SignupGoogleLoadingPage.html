@@ -1,0 +1,72 @@
+<!-- SignupGoogleLoadingPage.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting...</title>
+</head>
+
+<body>
+    <h1>Loading... Please wait</h1>
+    <script>
+        var api_url = "https://1c54e2ee-88a8-48fb-a3ef-887afa4bf6ae-00-13he0ux6uthb3.pike.replit.dev"
+        /**
+         * Extracts a specific query parameter from the URL.
+         * @param {string} param - The name of the query parameter to extract.
+         * @returns {string|null} - The value of the query parameter or null if not found.
+         */
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        /**
+         * Sets a cookie in the browser.
+         * @param {string} name - The name of the cookie.
+         * @param {string} value - The value of the cookie.
+         * @param {number} days - The number of days until the cookie expires.
+         */
+        function setCookie(name, value, days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = "expires=" + date.toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // Extract the expected token from the URL parameters
+            const expectedToken = getQueryParam('token');
+
+            if (!expectedToken) {
+                console.error("No token provided.");
+                return;
+            }
+
+            // Listen for messages from the popup window
+            window.addEventListener("message", function (event) {
+                // Verify the origin of the message for security
+                if (event.origin !== api_url) { // Adjust to match frontend origin
+                    console.warn("Received message from unknown origin:", event.origin);
+                    return;
+                }
+
+                const {token, user_id} = event.data;
+
+                // Check if the received token matches the expected token
+                if (token === expectedToken) {
+
+                    // Save the user_id in a cookie with the key "_user_id_"
+                    setCookie("_user_id_", user_id, 7);  // Cookie valid for 7 days
+                    console.log("User ID saved in cookie:", user_id);
+                    window.location.href = "../this fie will decide what to user show/investigator.html";
+                } else {
+                    console.warn("Received token does not match the expected token.");
+                }
+            }, false);
+        });
+    </script>
+</body>
+
+</html>
