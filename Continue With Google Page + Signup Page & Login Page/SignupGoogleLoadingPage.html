@@ -11,8 +11,8 @@
 <body>
     <h1>Loading... Please wait</h1>
     <script>
-        var api_url = "https://macrorover.pythonanywhere.com"
-        // var api_url = "https://1c54e2ee-88a8-48fb-a3ef-887afa4bf6ae-00-13he0ux6uthb3.pike.replit.dev"
+        var api_url = "https://macrorover.pythonanywhere.com";  // Adjust to your API URL
+
         /**
          * Extracts a specific query parameter from the URL.
          * @param {string} param - The name of the query parameter to extract.
@@ -37,35 +37,25 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
-            // Extract the expected token from the URL parameters
-            const expectedToken = getQueryParam('token');
-
-            if (!expectedToken) {
+            // Extract the token from the URL parameters
+            const token = getQueryParam('token');
+            if (!token) {
                 console.error("No token provided.");
                 return;
             }
 
-            // Listen for messages from the popup window
-            window.addEventListener("message", function (event) {
-                // Verify the origin of the message for security
-                if (event.origin !== api_url) { // Adjust to match frontend origin
-                    console.warn("Received message from unknown origin:", event.origin);
-                    return;
-                }
+            // Extract the user_id from the URL parameters (sent by Python via GET)
+            const user_id = getQueryParam('user_id');
+            if (user_id) {
+                // Save the user_id in a cookie
+                setCookie("_user_id_", user_id, 7);  // Cookie valid for 7 days
+                console.log("User ID saved in cookie:", user_id);
 
-                const {token, user_id} = event.data;
-
-                // Check if the received token matches the expected token
-                if (token === expectedToken) {
-
-                    // Save the user_id in a cookie with the key "_user_id_"
-                    setCookie("_user_id_", user_id, 7);  // Cookie valid for 7 days
-                    console.log("User ID saved in cookie:", user_id);
-                    window.location.href = "../this fie will decide what to user show/investigator.html";
-                } else {
-                    console.warn("Received token does not match the expected token.");
-                }
-            }, false);
+                // Redirect to the next page after storing user_id
+                window.location.href = "../this file will decide what to user show/investigator.html";
+            } else {
+                console.error("No user_id provided.");
+            }
         });
     </script>
 </body>
