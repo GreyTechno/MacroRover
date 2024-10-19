@@ -1,4 +1,4 @@
-SignupGoogleLoadingPage.html > configure the api url
+SignupGoogleLoadingPage.html > configure the api url, and configure redirect
 SignupGoogleButton.html > configure the api url
 SignupWithEmail-CheckConfirmationCodeSendOrNot.html > configure the api url
 LoginWithEmail.html > configure the api url
