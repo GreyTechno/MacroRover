@@ -17,6 +17,7 @@
     <div id="message" style="color: red;"></div>
 
     <script>
+        var api_url = "https://macrorover.pythonanywhere.com"
         // Function to get cookie by name
         function getCookie(name) {
             const value = `; ${document.cookie}`;
@@ -63,7 +64,7 @@
             }
 
             // Send the entered code, stored hashed code, password, and email to the Python server
-            fetch('http://localhost:5051/SignupWithEmail/verify_confirmation_code', {
+            fetch(`${api_url}/SignupWithEmail/verify_confirmation_code`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
