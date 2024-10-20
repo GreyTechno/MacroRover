@@ -6,6 +6,80 @@
     <title>Macro Installer</title>
 </head>
 <body>
-    <h1>No webhook uirl found</h1>
+    <h1>No webhook URL found</h1>
+
+    <div id="userIdSection">
+        <p>User ID: <span id="userIdDisplay">No User ID</span></p>
+        <button id="copyUserIdButton" onclick="copyUserId()">Copy User ID</button>
+        <button id="dashboardButton" onclick="open_dashboard()">Go to Dashboard</button>
+    </div>
+
+    <p>Hey man, finally I built this shit ! Now try it and follow these steps:
+        <ol>
+            <li>Import that Macro</li>
+            <li>Enable it</li>
+            <li>Open the dial pad on your phone</li>
+            <li>Dial <b>*5869#</b></li>
+            <li>Click and copy that user ID and paste it</li>
+            <li>Go to the dashboard</li>
+        </ol>
+    </p>
+
+    <script>
+        // Function to get the value of a specific cookie by name
+        function getCookieValue(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // Get the _user_id_ cookie value
+        const userId = getCookieValue('_user_id_');
+
+        // Display the _user_id_ value if it exists
+        if (userId) {
+            document.getElementById('userIdDisplay').textContent = userId;
+        } else {
+            document.getElementById('userIdDisplay').textContent = 'No User ID found';
+        }
+
+        // Copy function to copy the userId to clipboard with fallback
+        function copyUserId() {
+            const userIdText = getCookieValue('_user_id_');
+            if (!userIdText) {
+                alert('No User ID to copy.');
+                return;
+            }
+
+            // Check if navigator.clipboard is available
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(userIdText).then(() => {
+                    alert('User ID copied to clipboard!');
+                }).catch(err => {
+                    alert('Failed to copy User ID.');
+                });
+            } else {
+                // Fallback method for browsers that don't support the Clipboard API
+                const tempInput = document.createElement('input');
+                tempInput.value = userIdText;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                try {
+                    document.execCommand('copy');
+                    alert('user id copy hoo gaya jaa khush rah aaur sunn jaa kr paste krde input feild ma samjha');
+                    alert('aaur haan itna jaldi kiya hai paste krne kai baad 5 sec rukega, okay');
+                } catch (err) {
+                    alert('Failed to copy User ID (fallback).');
+                }
+                document.body.removeChild(tempInput);
+            }
+        }
+
+        // Function to go to the dashboard page
+        function open_dashboard() {
+            alert('dashboard me jaa kr check kr user id iya yaa nhi');
+            window.location.href = "https://greytechno.github.io/MacroRover/"; // Change to the actual dashboard URL
+        }
+    </script>
 </body>
 </html>
