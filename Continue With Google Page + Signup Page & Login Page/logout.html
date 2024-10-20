@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete User ID Cookie and Redirect</title>
+</head>
+<body>
+    <h1>Deleting User ID Cookie...</h1>
+
+    <script>
+        // Function to delete a cookie by setting its expiration date to the past
+        function deleteCookie(name) {
+            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        }
+
+        // Delete the _user_id_ cookie
+        deleteCookie('_user_id_');
+
+        // Redirect to another page after deleting the cookie
+        window.location.href = 'https://greytechno.github.io/MacroRover/'; // Change 'new-page.html' to the desired redirect URL
+    </script>
+</body>
+</html>
