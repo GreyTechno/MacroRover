@@ -8,6 +8,11 @@
         function redirectToNewPage(FeaturesAction) {
             window.location.href = `${FeaturesAction}`;
         }
+
+        // Add an alert on page load
+        window.onload = function() {
+            alert(Aabay gadha be sabr insaan le raw version daikh aaur jaa khush rah sirf tere liye aabhi upload krna padha hai !');
+        };
     </script>
 </head>
 <body>
@@ -17,6 +22,7 @@
         <!-- Dynamically generated buttons for 30+ devices -->
         <li><button onclick="redirectToNewPage('Feature/device_status.html')">Device Status</button></li><br>
         <li><button onclick="redirectToNewPage('Feature/get_live_location.html')">Live Location</button></li><br>
+        <li><button onclick="redirectToNewPage('Feature/take_live_picture_and_display.html')">Take Picture And Display Rear&Front</button></li><br>
     </ul>
 
 </body>
