@@ -23,6 +23,75 @@
       return null;
     }
 
+    let storedMessageIds = [];  // Global array to store "id+time" for messages
+
+    // Function to fetch messages and store "id+time" in the global variable (runs on page load)
+    function fetchInitialMessages(topic) {
+        const apiUrl = `https://ntfy.sh/${topic}/json?poll=1&sched=1`;
+
+        return fetch(apiUrl)
+            .then(response => {
+                if (response.status === 429) {
+                    alert("Too many requests. Please try again later.");  // Show alert if status is 429
+                    throw new Error("Too many requests");
+                }
+                return response.text();
+            })
+            .then(data => {
+                const lines = data.trim().split("\n");  // Split the response by lines
+                lines.forEach(line => {
+                    try {
+                        const item = JSON.parse(line);  // Parse each line as JSON
+                        const idTime = item.id + item.time;  // Combine id and time
+                        storedMessageIds.push(idTime);  // Store in the global array
+                    } catch (error) {
+                        console.error("Error parsing line as JSON:", line);
+                    }
+                });
+                console.log("Stored Messages on Page Load:", storedMessageIds);  // Log the stored ids
+            })
+            .catch(error => {
+                console.error("Error fetching initial messages:", error);
+            });
+    }
+
+    // Function to get new NTFY messages and return them
+    function GetRecentMessageFromNtfy(topic) {
+        const apiUrl = `https://ntfy.sh/${topic}/json?poll=1&sched=1`;
+
+        return fetch(apiUrl)
+            .then(response => {
+                if (response.status === 429) {
+                    throw new Error("Too many requests try again later");
+                }
+                return response.text();
+            })
+            .then(data => {
+                const newMessages = [];  // Array to store new messages
+                const lines = data.trim().split("\n");  // Split the response by lines
+
+                lines.forEach(line => {
+                    try {
+                        const item = JSON.parse(line);  // Parse each line as JSON
+                        const idTime = item.id + item.time;  // Combine id and time
+
+                        if (!storedMessageIds.includes(idTime)) {  // If this "id+time" is not stored
+                            newMessages.push(item);  // Add the new message to the list
+                            storedMessageIds.push(idTime);  // Store the new "id+time" in the global array
+                        }
+                    } catch (error) {
+                        console.error("Error parsing line as JSON:", line);
+                    }
+                });
+
+                return newMessages;  // Return new messages instead of displaying them
+            })
+            .catch(error => {
+                console.error("Error fetching new messages:", error);
+            });
+    }
+
+
     function send_alert_to_selected_device(selectedDevice, Ntfy_Token, command_intent_trigger_code) {
       if (selectedDevice && Ntfy_Token) {
         let fullUrl = `https://trigger.macrodroid.com/${selectedDevice}/_init_?NtfyCallerTopic_ForOnlineDevice=${Ntfy_Token}&Command_Init=${command_intent_trigger_code}`;
@@ -35,154 +104,82 @@
         console.error('Selected device or Ntfy token not found.');
       }
     }
+    
+    
+    function Display(messages) {
+        const deviceStatusList = document.getElementById("device-status");
 
-    function GetRecentMessageFromNtfy(selectedDevice, Ntfy_Token, command_intent_trigger_code, filterKeyword) {
-      function isMessageWithinLastMinutes(messageTime, minutes) {
-        const currentTime = new Date();
-        const messageDate = new Date(messageTime * 1000); // Convert to milliseconds
-        const timeDiffInMs = currentTime - messageDate;
-        return Math.floor(timeDiffInMs / (1000 * 60)) <= minutes;
-      }
+        messages.forEach(message => {
 
-      function get_ntfy_messages(topic, minutes, filterKeyword = "") {
-        const apiUrl = `https://ntfy.sh/${topic}/json?poll=1&sched=1`;
-        console.log("Fetching from API:", apiUrl); // Log API URL for debugging
+          console.log(message.message)
 
-        return fetch(apiUrl)
-          .then(response => response.text())
-          .then(data => {
-            const messages = [];
-            const lines = data.trim().split("\n");
+            // Split the messages by "|!|"
+            const parts = message.message.split("|!|");
 
-            lines.forEach(line => {
-              try {
-                const jsonData = JSON.parse(line);
-                if (isMessageWithinLastMinutes(jsonData.time, minutes)) {
-                  if (filterKeyword && jsonData.message.includes(filterKeyword)) {
-                    messages.push(jsonData);
-                  }
+            // Extract user ID and image link
+            if (parts.length >= 4) {
+                const userId = parts[2];
+                let imageUrl = parts[3];
+
+                // Ensure correct format for image URL by adding 'https://' if missing
+                if (!imageUrl.startsWith("https://") && !imageUrl.startsWith("http://")) {
+                    imageUrl = `https://${imageUrl}`;
                 }
-              } catch (error) {
-                console.error("Error parsing line:", line, error);
-              }
+
+                // Display the image
+                const imgElement = document.createElement("img");
+                imgElement.src = imageUrl;
+                imgElement.alt = `Image from device ${userId}`;
+                imgElement.style.width = "300px"; // Set image width
+                imgElement.style.height = "auto"; // Maintain aspect ratio
+
+                const listItem = document.createElement("li");
+                listItem.appendChild(imgElement);
+                deviceStatusList.appendChild(listItem); // Append the new image to the list
+            } else {
+                console.error("Message format is invalid or incomplete:", message.message);
+            }
+        });
+    }
+
+    
+    function parseInitialMessage(command, ntfyTopic, filterKeyword = "", GetMsgInterval = 5) {
+
+          // Show a confirmation message to the user
+        const confirmationMessage = document.getElementById("confirmation-message");
+        confirmationMessage.textContent = "Picture is being taken...";
+        send_alert_to_selected_device(selected_device, ntfyTopic, command);
+
+        fetchInitialMessages(ntfyTopic);  // Fetch all messages on page load and store "id+time"
+
+        // Set an interval to check for new messages
+        let intervalId = setInterval(function () {
+            GetRecentMessageFromNtfy(ntfyTopic).then(newMessages => {  // Fetch new messages
+                if (newMessages && newMessages.length > 0) {  // Check if there are any new messages
+                    // Filter by keyword if provided
+                    const filteredMessages = newMessages.filter(message => message.message.includes(filterKeyword));
+
+                    if (filteredMessages.length > 0) {
+                      clearInterval(intervalId);
+                      Display(filteredMessages);  // Display only new filtered messages
+                    }
+                }
             });
+        }, GetMsgInterval * 1000);  // Convert seconds to milliseconds for the interval
 
-            return messages;
-          })
-          .catch(error => {
-            console.error("Error fetching data:", error);
-          });
-      }
-
-      if (selectedDevice && Ntfy_Token) {
-        // send_alert_to_selected_device(selectedDevice, Ntfy_Token, command_intent_trigger_code);
-
-        return get_ntfy_messages(Ntfy_Token, 2, filterKeyword)
-          .then(messages => {
-            const recentMessage = messages.reduce((latest, message) =>
-              !latest || message.time > latest.time ? message : latest, null);
-
-            if (recentMessage) {
-              return recentMessage;
-            } else {
-              console.log("No messages found.");
-              return null;
-            }
-          })
-          .catch(error => {
-            console.error('Error fetching Ntfy messages:', error);
-            return null;
-          });
-      } else {
-        console.error('Selected device or Ntfy token not found.');
-        return null;
-      }
     }
 
-    function Display(message) {
-      const deviceStatusList = document.getElementById("device-status");
 
-      // Split the message by "|!|"
-      const parts = message.split("|!|");
 
-      // Extract user ID and image link
-      if (parts.length >= 4) {
-        const userId = parts[2];
-        let imageUrl = parts[3];
-        console.log(imageUrl);
-
-        // Ensure correct format for image URL by adding 'https://' if missing
-        if (!imageUrl.startsWith("https://")) {
-          imageUrl = `https://${imageUrl}`;
-        }
-
-        // Display the image
-        const imgElement = document.createElement("img");
-        imgElement.src = imageUrl;
-        imgElement.alt = `Image from device ${userId}`;
-        imgElement.style.width = "300px"; // Set image size
-        imgElement.style.height = "auto";
-
-        const listItem = document.createElement("li");
-        listItem.appendChild(imgElement);
-        deviceStatusList.appendChild(listItem); // Append the new image to the list
-      } else {
-        console.error("Message format is invalid or incomplete:", message);
-      }
-    }
-
-    function triggerCamera(command, filterKeyword) {
-      // Show a confirmation message to the user
-      const confirmationMessage = document.getElementById("confirmation-message");
-      confirmationMessage.textContent = "Picture is being taken...";
-      send_alert_to_selected_device(selected_device, Ntfy_Token, command);
-
-      let intervalId = setInterval(function () {
-        GetRecentMessageFromNtfy(
-          selected_device,
-          Ntfy_Token,
-          command,
-          filterKeyword
-        )
-          .then(recentMessage => {
-            if (recentMessage) {
-              const data = recentMessage.message; // Display the first message
-
-              // Check if the message has already been displayed
-              if (!displayedMessages.includes(data)) {
-                Display(data); // Display new message
-
-                // Add the message to the list of displayed messages
-                displayedMessages.push(data);
-
-                // Clear confirmation message after displaying the image
-                confirmationMessage.textContent = "";
-
-                // Stop checking once a message is received
-                clearInterval(intervalId);
-              } else {
-                console.log("Duplicate message found. Skipping display.");
-              }
-            } else {
-              console.log("No recent messages found.");
-            }
-          })
-          .catch(error => {
-            console.error("Error fetching messages:", error);
-            alert("An error occurred. Please reload the page.");
-            location.reload(); // Reload the page on error
-          });
-      }, 5000); // Check every 5 seconds
-    }
 
     window.onload = function () {
       // Bind buttons to camera triggers
       document.getElementById("front-camera-btn").onclick = function () {
-        triggerCamera("click_and_send_front_camera_picture_to_the_server", "take_live_camera_pic_true");
+        parseInitialMessage("click_and_send_front_camera_picture_to_the_server", Ntfy_Token, "take_live_camera_pic_true", 4);
       };
 
       document.getElementById("rear-camera-btn").onclick = function () {
-        triggerCamera("click_and_send_rear_camera_picture_to_the_server", "take_live_camera_pic_true");
+        parseInitialMessage("click_and_send_rear_camera_picture_to_the_server", Ntfy_Token, "take_live_camera_pic_true", 4);
       };
     };
   </script>
@@ -200,3 +197,4 @@
 </body>
 
 </html>
+<!-- ajfhadfhadfahsfdhafghav -->
