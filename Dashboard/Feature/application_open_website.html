@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Website</title>
+    <style>
+        /* Background gradient */
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #232526, #414345);
+            color: #f1f1f1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Container styling */
+        .container {
+            background-color: #2C2F33;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            width: 100%;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .container:hover {
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+        }
+
+        /* Heading styles */
+        h1 {
+            font-size: 26px;
+            margin-bottom: 25px;
+            color: #f1f1f1;
+            padding-bottom: 10px;
+        }
+
+        /* Input styles */
+        input[type="text"] {
+            width: calc(100% - 40px);
+            padding: 12px 15px;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            background-color: #40444B;
+            border: 1px solid #586069;
+            border-radius: 8px;
+            color: #f1f1f1;
+            outline: none;
+            transition: border 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            border-color: #7289da;
+        }
+
+        /* Checkbox label styles */
+        label {
+            font-size: 16px;
+            color: #d1d1d1;
+            display: block;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 10px;
+            accent-color: #7289da;
+        }
+
+        /* Button styles */
+        button {
+            background: linear-gradient(135deg, #7289da, #99aab5);
+            border: none;
+            color: #fff;
+            padding: 15px 25px;
+            font-size: 16px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #677bc4, #8292a1);
+        }
+
+        /* Loading text */
+        #loadingText {
+            color: #7289da;
+            font-style: italic;
+            margin-top: 20px;
+            display: none;
+        }
+
+        /* Response text */
+        #responseText {
+            color: #f1f1f1;
+            margin-top: 20px;
+            font-style: italic;
+        }
+
+        /* Certificate option hidden */
+        #allowCertDiv {
+            margin-top: 10px;
+        }
+
+        /* Mobile responsive styling */
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 22px;
+            }
+            button {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Open Website</h1>
+
+        <!-- Input for website URL -->
+        <div>
+            <input type="text" id="websiteUrl" placeholder="Enter website URL...">
+        </div>
+
+        <!-- Checkboxes for URL encode and HTTP GET options -->
+        <div>
+            <label>
+                <input type="checkbox" id="urlEncode"> URL Encode Parameters
+            </label>
+            <label>
+                <input type="checkbox" id="httpGet" onclick="toggleCertificateOption()"> HTTP GET
+            </label>
+        </div>
+
+        <!-- Allow Any Certificate option appears only when HTTP GET is checked -->
+        <div id="allowCertDiv" style="display: none;">
+            <label>
+                <input type="checkbox" id="allowAnyCert"> Allow Any Certificate
+            </label>
+        </div>
+
+        <!-- Button to open website -->
+        <div>
+            <button onclick="openWebsite()">Open Website</button>
+        </div>
+
+        <!-- Loading and response message areas -->
+        <div id="loadingText">Processing request... Please wait.</div>
+        <div id="responseText"></div>
+    </div>
+
+    <script>
+        let appWorker;
+
+        function startAppWorker(ntfyTopic) {
+            if (typeof(Worker) !== "undefined") {
+                if (typeof(appWorker) === "undefined") {
+                    const workerCode = `
+                        self.onmessage = function(e) {
+                            if (e.data === 'startListening') {
+                                const eventSource = new EventSource('https://ntfy.sh/${ntfyTopic}/sse');
+                                
+                                eventSource.onmessage = function(event) {
+                                    self.postMessage(event.data);
+                                };
+                                
+                                eventSource.onerror = function(event) {
+                                    self.postMessage({ error: 'Error with EventSource', details: event });
+                                };
+                            }
+                        };
+                    `;
+                    const blob = new Blob([workerCode], { type: 'application/javascript' });
+                    const workerURL = URL.createObjectURL(blob);
+                    appWorker = new Worker(workerURL);
+                    appWorker.postMessage('startListening');
+                    
+                    appWorker.onmessage = function(event) {
+                        if (event.data.error) {
+                            console.error(event.data.error, event.data.details);
+                        } else {
+                            handleAppMessage(event.data);
+                        }
+                    };
+                }
+            } else {
+                console.log("Web workers are not supported in your browser.");
+            }
+        }
+
+        function stopAppWorker() {
+            if (appWorker) {
+                appWorker.terminate();
+                appWorker = undefined;
+            }
+        }
+
+        // Function to get a cookie by name
+        function getCookie(name) {
+            let nameEQ = name + "=";
+            let cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.indexOf(nameEQ) == 0) {
+                    return cookie.substring(nameEQ.length, cookie.length);
+                }
+            }
+            return null;
+        }
+
+        function handleAppMessage(receivedMessage) {
+            try {
+                const jsonString = receivedMessage;
+                const jsonObject = JSON.parse(jsonString);
+                const messageContent = jsonObject.message;
+
+                if (messageContent.includes("application_website_opened")) {
+                    document.getElementById("loadingText").style.display = "none"; // Hide loading text on success
+                    WebsiteOutputResponse = messageContent.split("|!|")[1]; 
+                    // Check if the response is empty
+                    if (!WebsiteOutputResponse) {
+                        responseText.innerHTML = "<em>empty_response</em>";
+                    } else {
+                        responseText.innerText = WebsiteOutputResponse;
+                        responseText.style.fontStyle = "normal"; // Ensure normal font style
+                    }
+                    stopAppWorker();
+                }
+            } catch (e) {
+                console.error("Failed to parse message:", e);
+            }
+        }
+
+        function sendWebsiteRequestToDevice(webhookUrl, params) {
+            if (webhookUrl) {
+                const fullUrl = `https://trigger.macrodroid.com/${webhookUrl}/_init_${params}`;
+                fetch(fullUrl);
+            }
+        }
+
+        function openWebsite() {
+            const websiteUrl = document.getElementById("websiteUrl").value.trim();
+            const urlEncode = document.getElementById("urlEncode").checked;
+            const httpGet = document.getElementById("httpGet").checked;
+            const allowAnyCert = document.getElementById("allowAnyCert").checked;
+
+            // Check if the website URL is entered
+            if (!websiteUrl) {
+                alert("Please enter a website URL.");
+                return;
+            }
+
+            document.getElementById("loadingText").style.display = "block"; // Show loading text
+
+            let ntfyTopic = getCookie("ntfy_subcribe_token");
+            let webhookUrl = getCookie("selected_device");
+
+            let command = `application_open_website`;
+
+            // Check if no checkboxes are checked (default case)
+            if (!urlEncode && !httpGet && !allowAnyCert) {
+                command += "_default_open";
+            } 
+            // If URL encode is checked
+            else if (urlEncode && !httpGet && !allowAnyCert) {
+                command += "_url_encode";
+            } 
+            else if (!urlEncode && httpGet && !allowAnyCert) {
+                command += "_http_get";
+            } 
+            else if (urlEncode && httpGet && !allowAnyCert) {
+                command += "_url_encode_http_get";
+            } 
+            // If HTTP GET and Allow Any Cert are both checked
+            else if (httpGet && allowAnyCert) {
+                command += "_http_get_allow_any_cert";
+            } 
+            else if (urlEncode && httpGet && allowAnyCert) {
+                command += "_url_encode_http_get_allow_any_cert";
+            }
+
+            sendWebsiteRequestToDevice(webhookUrl, `?NtfyCallerTopic_ForOnlineDevice=${ntfyTopic}&Command_Init=${command}&Application_Open_Website_URLs=${encodeURIComponent(websiteUrl)}`);
+            startAppWorker(ntfyTopic);
+        }
+
+        // Toggle Allow Any Certificate checkbox based on HTTP GET selection
+        function toggleCertificateOption() {
+            const allowCertDiv = document.getElementById("allowCertDiv");
+            const httpGetChecked = document.getElementById("httpGet").checked;
+            allowCertDiv.style.display = httpGetChecked ? "block" : "none";
+        }
+
+    </script>
+
+</body>
+</html>

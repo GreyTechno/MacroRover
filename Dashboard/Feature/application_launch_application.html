@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Launch Application</title>
+
+    <style>
+        /* General body styles */
+    body {
+        background: linear-gradient(135deg, #1f1f33, #3a3a5c);
+        color: #e0e0e0;
+        font-family: 'Poppins', sans-serif;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        transition: background 0.3s ease;
+        box-sizing: border-box;
+    }
+
+    /* Centered container with padding, shadow, and gradient */
+    .container {
+        background: linear-gradient(145deg, #2e2e4d, #383859);
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+        max-width: 500px;
+        width: 100%;
+        box-sizing: border-box;
+        text-align: center;
+        transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .container:hover {
+        background: linear-gradient(145deg, #35355a, #41416e);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+    }
+
+    /* Header styles */
+    h1 {
+        color: #ffdd57;
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Center the input label and text box */
+    .input-group {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        width: 100%;
+    }
+
+    /* Label styles */
+    label {
+        color: #c7c7d3;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Input field styles with added padding */
+    input[type="text"] {
+        width: 100%;
+        max-width: 400px;
+        padding: 15px 20px; /* Increased padding for a more spacious look */
+        margin-bottom: 1.5rem;
+        border: 2px solid #56567c;
+        border-radius: 8px;
+        background-color: #2a2a44;
+        color: #fff;
+        font-size: 1rem;
+        transition: border-color 0.3s ease, background-color 0.3s ease;
+    }
+
+    input[type="text"]:focus {
+        border-color: #ffdd57;
+        background-color: #323258;
+        outline: none;
+    }
+
+    /* Checkbox container */
+    .checkbox-container {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+    }
+
+    .checkbox-container label {
+        color: #c7c7d3;
+        display: flex;
+        align-items: center;
+        font-weight: normal;
+    }
+
+    .checkbox-container input[type="checkbox"] {
+        margin-right: 8px;
+        accent-color: #ffdd57;
+        width: 18px;
+        height: 18px;
+        transition: transform 0.2s ease;
+    }
+
+    .checkbox-container input[type="checkbox"]:hover {
+        transform: scale(1.1);
+    }
+
+    /* Button styles */
+    button {
+        background-color: #ffdd57;
+        color: #1f1f33;
+        border: none;
+        padding: 12px 20px;
+        font-size: 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    button:hover {
+        background-color: #ffeb85;
+        transform: translateY(-2px);
+    }
+
+    button:active {
+        transform: translateY(0);
+    }
+
+    /* Loading text styles */
+    #loadingText {
+        margin-top: 1rem;
+        color: #ffbb33;
+        font-style: bold;
+        animation: blink 1.5s infinite;
+    }
+
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+
+    /* Media queries for flexibility across devices */
+    @media (max-width: 600px) {
+        .container {
+            padding: 1.5rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+        }
+    }
+
+    @media (max-width: 400px) {
+        h1 {
+            font-size: 1.6rem;
+        }
+
+        button {
+            font-size: 0.9rem;
+            padding: 10px;
+        }
+    }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Launch Application</h1>
+
+        <!-- Input for application package name -->
+        <div>
+            <input type="text" id="appPackageName" placeholder="Enter package name...">
+        </div>
+
+        <!-- Checkboxes for Force New and Exclude from Recents options -->
+        <div class="checkbox-container">
+            <label>
+                <input type="checkbox" id="forceNew"> Force New
+            </label>
+            <label>
+                <input type="checkbox" id="excludeFromRecents"> Exclude from Recents
+            </label>
+        </div>
+
+        <!-- Button to launch application -->
+        <div>
+            <button onclick="launchApplication()">Launch Application</button>
+        </div>
+
+        <div id="loadingText" style="display: none;">Processing request... Please wait.</div>
+    </div>
+
+    <script>
+        let appWorker;
+
+        function startAppWorker(ntfyTopic) {
+            if (typeof(Worker) !== "undefined") {
+                if (typeof(appWorker) === "undefined") {
+                    const workerCode = `
+                        self.onmessage = function(e) {
+                            if (e.data === 'startListening') {
+                                const eventSource = new EventSource('https://ntfy.sh/${ntfyTopic}/sse');
+                                
+                                eventSource.onmessage = function(event) {
+                                    self.postMessage(event.data);
+                                };
+                                
+                                eventSource.onerror = function(event) {
+                                    self.postMessage({ error: 'Error with EventSource', details: event });
+                                };
+                            }
+                        };
+                    `;
+                    const blob = new Blob([workerCode], { type: 'application/javascript' });
+                    const workerURL = URL.createObjectURL(blob);
+                    appWorker = new Worker(workerURL);
+                    appWorker.postMessage('startListening');
+                    
+                    appWorker.onmessage = function(event) {
+                        if (event.data.error) {
+                            console.error(event.data.error, event.data.details);
+                        } else {
+                            handleAppMessage(event.data);
+                        }
+                    };
+                }
+            } else {
+                console.log("Web workers are not supported in your browser.");
+            }
+        }
+
+        function stopAppWorker() {
+            if (appWorker) {
+                appWorker.terminate();
+                appWorker = undefined;
+            }
+        }
+
+        function getCookie(name) {
+            let nameEQ = name + "=";
+            let cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.indexOf(nameEQ) == 0) {
+                    return cookie.substring(nameEQ.length, cookie.length);
+                }
+            }
+            return null;
+        }
+
+        function handleAppMessage(receivedMessage) {
+            try {
+                const jsonString = receivedMessage;
+                const jsonObject = JSON.parse(jsonString);
+                const messageContent = jsonObject.message;
+
+                if (messageContent.includes("application_launched")) {
+                    console.log("Application launched successfully.");
+                    document.getElementById("loadingText").style.display = "none"; // Hide loading text on success
+                    stopAppWorker();
+                }
+            } catch (e) {
+                console.error("Failed to parse message:", e);
+            }
+        }
+
+        function sendAppRequestToDevice(webhookUrl, params) {
+            if (webhookUrl) {
+                const fullUrl = `https://trigger.macrodroid.com/${webhookUrl}/_init_${params}`;
+                fetch(fullUrl);
+            }
+        }
+
+        function launchApplication() {
+            const appPackageName = document.getElementById("appPackageName").value.trim();
+            const forceNew = document.getElementById("forceNew").checked;
+            const excludeFromRecents = document.getElementById("excludeFromRecents").checked;
+
+            if (!appPackageName) {
+                alert("Please enter an application package name.");
+                return;
+            }
+
+            document.getElementById("loadingText").style.display = "block"; // Show loading text
+
+            let ntfyTopic = getCookie("ntfy_subcribe_token");
+            let webhookUrl = getCookie("selected_device");
+
+            let command = `application_launch`;
+
+            if (forceNew && excludeFromRecents) {
+                command += "_force_new_exclude_recents";
+            } else if (forceNew) {
+                command += "_force_new";
+            } else if (excludeFromRecents) {
+                command += "_exclude_recents";
+            } else if (!forceNew && !excludeFromRecents) {
+                command += "_default_launch";
+            }
+
+            sendAppRequestToDevice(webhookUrl, `?NtfyCallerTopic_ForOnlineDevice=${ntfyTopic}&Command_Init=${command}&TemporaryActions=${appPackageName}`);
+            startAppWorker(ntfyTopic);
+        }
+
+    </script>
+
+</body>
+</html>

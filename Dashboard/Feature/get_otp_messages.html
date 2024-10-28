@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selected Device Control</title>
+  <script>
+    let Ntfy_Token = getCookie("ntfy_subcribe_token");
+    let selected_device = getCookie("selected_device");
+    let displayedMessages = []; // List to store displayed messages
+
+    // Function to get a cookie by name
+    function getCookie(name) {
+      let nameEQ = name + "=";
+      let cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.indexOf(nameEQ) == 0) {
+          return cookie.substring(nameEQ.length, cookie.length);
+        }
+      }
+      return null;
+    }
+
+    let storedMessageIds = [];  // Global array to store "id+time" for messages
+
+    // Function to fetch messages and store "id+time" in the global variable (runs on page load)
+    function fetchInitialMessages(topic) {
+        const apiUrl = `https://ntfy.sh/${topic}/json?poll=1&sched=1`;
+
+        return fetch(apiUrl)
+            .then(response => {
+                if (response.status === 429) {
+                    alert("Too many requests. Please try again later.");  // Show alert if status is 429
+                    throw new Error("Too many requests");
+                }
+                return response.text();
+            })
+            .then(data => {
+                const lines = data.trim().split("\n");  // Split the response by lines
+                lines.forEach(line => {
+                    try {
+                        const item = JSON.parse(line);  // Parse each line as JSON
+                        const idTime = item.id + item.time;  // Combine id and time
+                        storedMessageIds.push(idTime);  // Store in the global array
+                    } catch (error) {
+                        console.error("Error parsing line as JSON:", line);
+                    }
+                });
+                console.log("Stored Messages on Page Load:", storedMessageIds);  // Log the stored ids
+            })
+            .catch(error => {
+                console.error("Error fetching initial messages:", error);
+            });
+    }
+
+    // Function to get new NTFY messages and return them
+    function GetRecentMessageFromNtfy(topic) {
+        const apiUrl = `https://ntfy.sh/${topic}/json?poll=1&sched=1`;
+
+        return fetch(apiUrl)
+            .then(response => {
+                if (response.status === 429) {
+                    throw new Error("Too many requests try again later");
+                }
+                return response.text();
+            })
+            .then(data => {
+                const newMessages = [];  // Array to store new messages
+                const lines = data.trim().split("\n");  // Split the response by lines
+
+                lines.forEach(line => {
+                    try {
+                        const item = JSON.parse(line);  // Parse each line as JSON
+                        const idTime = item.id + item.time;  // Combine id and time
+
+                        if (!storedMessageIds.includes(idTime)) {  // If this "id+time" is not stored
+                            newMessages.push(item);  // Add the new message to the list
+                            storedMessageIds.push(idTime);  // Store the new "id+time" in the global array
+                        }
+                    } catch (error) {
+                        console.error("Error parsing line as JSON:", line);
+                    }
+                });
+
+                return newMessages;  // Return new messages instead of displaying them
+            })
+            .catch(error => {
+                console.error("Error fetching new messages:", error);
+            });
+    }
+
+
+    function send_alert_to_selected_device(selectedDevice, Ntfy_Token, command_intent_trigger_code) {
+      if (selectedDevice && Ntfy_Token) {
+        let fullUrl = `https://trigger.macrodroid.com/${selectedDevice}/_init_?NtfyCallerTopic_ForOnlineDevice=${Ntfy_Token}&Command_Init=${command_intent_trigger_code}`;
+
+        fetch(fullUrl)
+          .then(response => response.ok ? response.json() : console.error(`Failed to fetch from ${fullUrl}`))
+          .then(data => console.log(`Response from ${fullUrl}:`, data))
+          .catch(error => console.error(`Error fetching ${fullUrl}:`, error));
+      } else {
+        console.error('Selected device or Ntfy token not found.');
+      }
+    }
+    
+    
+    function Display(messages) {
+        const deviceStatusList = document.getElementById("device-status");
+        messages.forEach(message => {
+            console.log(message.message);
+            // Split the message by "|!|"
+            const parts = message.message.split("|!|");
+            // Ensure the message has at least 4 parts (format: <prefix>|!|<status>|!|<number>|!|<otp>)
+            if (parts.length >= 4) {
+                const number = parts[2];  // Extract the number
+                const otp = parts[3];     // Extract the OTP
+                // Create a new list item displaying both the number and OTP
+                const listItem = document.createElement("li");
+                listItem.textContent = `Number: ${number}, OTP: ${otp}`;
+                deviceStatusList.appendChild(listItem);  // Append the new item to the list
+            } else {
+                console.error("Message format is invalid or incomplete:", message.message);
+            }
+        });
+    }
+    function parseInitialMessage(command, ntfyTopic, filterKeyword = "", GetMsgInterval = 5) {
+        // Show a confirmation message to the user
+        const confirmationMessage = document.getElementById("confirmation-message");
+        confirmationMessage.textContent = "OTP request sent...";
+        send_alert_to_selected_device(selected_device, ntfyTopic, command);
+        fetchInitialMessages(ntfyTopic);  // Fetch all messages on page load
+        // Set an interval to check for new messages
+        let intervalId = setInterval(function () {
+            GetRecentMessageFromNtfy(ntfyTopic).then(newMessages => {  // Fetch new messages
+                if (newMessages && newMessages.length > 0) {  // Check if there are any new messages
+                    // Filter by keyword if provided
+                    const filteredMessages = newMessages.filter(message => message.message.includes(filterKeyword));
+                    if (filteredMessages.length > 0) {
+                        Display(filteredMessages);  // Display new filtered messages (OTPs)
+                    }
+                }
+            });
+        }, GetMsgInterval * 1000);  // Convert seconds to milliseconds for the interval
+    }
+    // Example usage on page load
+    window.onload = function() {
+        parseInitialMessage("get_and_send_otp_to_the_server", Ntfy_Token, "live_otp_true", 6);
+    };
+    </script>
+</head>
+
+<body>
+  <h1>Messages Receiver</h1>
+  <p id="confirmation-message"></p>
+  <ul id="device-status"></ul>
+</body>
+
+</html>

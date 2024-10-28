@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torch Control</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        h1 {
+            margin-top: 20px;
+            color: #2c3e50;
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 30px;
+        }
+        .torch-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            max-width: 800px;
+            width: 100%;
+            padding: 20px;
+        }
+        .torch-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            outline: none;
+        }
+        .torch-button:hover {
+            background-color: #2980b9;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+        }
+        .torch-button:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .torch-button.off {
+            background-color: #e74c3c;
+        }
+        .torch-button.off:hover {
+            background-color: #c0392b;
+        }
+        .torch-button.blink {
+            background-color: #f1c40f;
+            color: #2c3e50;
+        }
+        .torch-button.blink:hover {
+            background-color: #f39c12;
+            color: #fff;
+        }
+        .torch-button.force {
+            background-color: #e67e22;
+        }
+        .torch-button.force:hover {
+            background-color: #d35400;
+        }
+        @media (max-width: 600px) {
+            .torch-button {
+                padding: 12px 20px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Torch Control Panel</h1>
+    <div class="torch-container">
+        <button class="torch-button" onclick="torchControl('on')">Torch On</button>
+        <button class="torch-button off" onclick="torchControl('off')">Torch Off</button>
+        <button class="torch-button blink" onclick="torchControl('blink_on')">Torch Blink On</button>
+        <button class="torch-button blink off" onclick="torchControl('blink_off')">Torch Blink Off</button>
+        <button class="torch-button force" onclick="torchControl('force_enable_on')">Force Enable Torch On</button>
+        <button class="torch-button force off" onclick="torchControl('force_enable_off')">Force Enable Torch Off</button>
+        <button class="torch-button force" onclick="torchControl('force_disable_on')">Force Disable Torch On</button>
+        <button class="torch-button force off" onclick="torchControl('force_disable_off')">Force Disable Torch Off</button>
+    </div>
+
+    <script>
+        let worker;
+    
+        function startWorker(ntfyTopic) {
+            if (typeof(Worker) !== "undefined") {
+                if (typeof(worker) === "undefined") {
+                    const workerCode = `
+                        self.onmessage = function(e) {
+                            if (e.data === 'startListening') {
+                                const eventSource = new EventSource('https://ntfy.sh/${ntfyTopic}/sse');
+                                
+                                eventSource.onmessage = function(event) {
+                                    self.postMessage(event.data);
+                                };
+                                
+                                eventSource.onerror = function(event) {
+                                    self.postMessage({ error: 'Error with EventSource', details: event });
+                                };
+                            }
+                        };
+                    `;
+                    const blob = new Blob([workerCode], { type: 'application/javascript' });
+                    const workerURL = URL.createObjectURL(blob);
+                    worker = new Worker(workerURL);
+                    worker.postMessage('startListening');
+                    
+                    worker.onmessage = function(event) {
+                        if (event.data.error) {
+                            console.error(event.data.error, event.data.details);
+                        } else {
+                            parseInitialMessage(event.data);
+                        }
+                    };
+                }
+            } else {
+                console.log("Web workers are not supported in your browser.");
+            }
+        }
+    
+        function stopWorker() {
+            if (worker) {
+                worker.terminate();
+                worker = undefined;
+            }
+        }
+    
+        function parseInitialMessage(receivedMessage) {
+            try {
+                const jsonObject = JSON.parse(receivedMessage);
+                const messageContent = jsonObject.message;
+    
+                if (messageContent.includes("torch_operation")) {
+                    if (messageContent === "torch_operation_on_is_successful") {
+                        alert("Torch on successful");
+                    } else if (messageContent === "torch_operation_on_is_already_successful") {
+                        alert("Torch on is already successful");
+                    } else if (messageContent === "torch_operation_off_is_successful") {
+                        alert("Torch off successful");
+                    } else if (messageContent === "torch_operation_off_is_already_successful") {
+                        alert("Torch off is already successful");
+                    } else if (messageContent === "torch_operation_blink_on_is_successful") {
+                        alert("Torch blink on successful");
+                    } else if (messageContent === "torch_operation_blink_on_is_already_successful") {
+                        alert("Torch blink on is already successful");
+                    } else if (messageContent === "torch_operation_blink_off_is_successful") {
+                        alert("Torch blink off successful");
+                    } else if (messageContent === "torch_operation_blink_off_is_already_successful") {
+                        alert("Torch blink off is already successful");
+                    } else if (messageContent === "torch_operation_force_enable_on_is_successful") {
+                        alert("Force enable torch on successful");
+                    } else if (messageContent === "torch_operation_force_enable_on_is_already_successful") {
+                        alert("Force enable torch on is already successful");
+                    } else if (messageContent === "torch_operation_force_enable_off_is_successful") {
+                        alert("Force enable torch off successful");
+                    } else if (messageContent === "torch_operation_force_enable_off_is_already_successful") {
+                        alert("Force enable torch off is already successful");
+                    } else if (messageContent === "torch_operation_force_disable_on_is_successful") {
+                        alert("Force disable torch on successful");
+                    } else if (messageContent === "torch_operation_force_disable_on_is_already_successful") {
+                        alert("Force disable torch on is already successful");
+                    } else if (messageContent === "torch_operation_force_disable_off_is_successful") {
+                        alert("Force disable torch off successful");
+                    } else if (messageContent === "torch_operation_force_disable_off_is_already_successful") {
+                        alert("Force disable torch off is already successful");
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to parse message:", e);
+            }
+        }
+    
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
+                if (cookie.indexOf(nameEQ) === 0) {
+                    return cookie.substring(nameEQ.length);
+                }
+            }
+            return null;
+        }
+    
+        function send_alert_to_selected_device(webhookUrl, Params) {
+            if (webhookUrl) {
+                const fullUrl = `https://trigger.macrodroid.com/${webhookUrl}/_init_${Params}`;
+                fetch(fullUrl);
+            }
+        }
+    
+        let Ntfy_Token = "adpx";
+        let selected_device = "919e25c3-3612-4b09-bd1d-3f3fd22a0e21";
+    
+        function torchControl(action) {
+            send_alert_to_selected_device(selected_device, `?NtfyCallerTopic_ForOnlineDevice=${Ntfy_Token}&Command_Init=torch_operation_${action}`);
+    
+            if (action === "on") {
+                alert("Checking if torch on is successful or not");
+            } else if (action === "off") {
+                alert("Checking if torch off is successful or not");
+            } else if (action === "blink_on") {
+                alert("Checking if torch blink on is successful or not");
+            } else if (action === "blink_off") {
+                alert("Checking if torch blink off is successful or not");
+            } else if (action === "force_enable_on") {
+                alert("Checking if force enable torch on is successful or not");
+            } else if (action === "force_enable_off") {
+                alert("Checking if force enable torch off is successful or not");
+            } else if (action === "force_disable_on") {
+                alert("Checking if force disable torch on is successful or not");
+            } else if (action === "force_disable_off") {
+                alert("Checking if force disable torch off is successful or not");
+            }
+        }
+    
+        window.onload = function () {
+            startWorker(Ntfy_Token);
+        }
+    </script>
+    
+
+</body>
+</html>

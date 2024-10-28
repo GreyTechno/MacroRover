@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Installed Apps</title>
+    <style>
+        /* Reset some basic styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body Styling */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1b1b2f;
+            color: #e0e0e0;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Main Title */
+        h1 {
+            color: #f05454;
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 40px;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Button Container */
+        .button-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        /* Control Button Styling */
+        .control-button {
+            background-color: #30475e;
+            color: #f5f5f5;
+            border: none;
+            padding: 12px 20px;
+            font-size: 18px;
+            font-weight: 500;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-button:hover {
+            background-color: #f05454;
+        }
+
+        .control-button:active {
+            transform: translateY(2px);
+        }
+
+        /* Loading Text */
+        .loading-text {
+            font-size: 20px;
+            color: #ffcc29;
+            margin-top: 20px;
+            display: none;
+        }
+
+        /* Checkbox Container */
+        .checkbox-container {
+            margin: 20px 0;
+        }
+
+        .checkbox-container label {
+            font-size: 18px;
+            color: #f5f5f5;
+        }
+
+        .checkbox-container input {
+            margin-right: 10px;
+            transform: scale(1.2);
+            vertical-align: middle;
+        }
+
+        /* App List Styling */
+        .app-list {
+            margin-top: 30px;
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .app-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #222831;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+            transition: transform 0.2s ease;
+        }
+
+        .app-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .app-name, .app-package {
+            font-size: 18px;
+            color: #ececec;
+            word-break: break-word;
+        }
+
+        /* Media Queries for Smaller Screens */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 28px;
+            }
+
+            .control-button {
+                font-size: 16px;
+                padding: 10px 16px;
+            }
+
+            .loading-text {
+                font-size: 18px;
+            }
+
+            .app-name, .app-package {
+                font-size: 16px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Get Installed Apps</h1>
+
+    <div class="button-container">
+        <button class="control-button" onclick="getInstalledApps()">Get Installed Apps</button>
+    </div>
+
+    <div class="checkbox-container">
+        <label>
+            <input type="checkbox" id="includeNonLaunchable"> Include non-launchable apps
+        </label>
+    </div>
+
+    <div id="loadingText" class="loading-text">Loading... Please wait.</div>
+
+    <div id="appList" class="app-list"></div>
+
+    <script>
+        let appWorker;
+
+        function startAppWorker(ntfyTopic) {
+            if (typeof(Worker) !== "undefined") {
+                if (typeof(appWorker) === "undefined") {
+                    const workerCode = `
+                        self.onmessage = function(e) {
+                            if (e.data === 'startListening') {
+                                const eventSource = new EventSource('https://ntfy.sh/${ntfyTopic}/sse');
+                                
+                                eventSource.onmessage = function(event) {
+                                    self.postMessage(event.data);
+                                };
+                                
+                                eventSource.onerror = function(event) {
+                                    self.postMessage({ error: 'Error with EventSource', details: event });
+                                };
+                            }
+                        };
+                    `;
+                    const blob = new Blob([workerCode], { type: 'application/javascript' });
+                    const workerURL = URL.createObjectURL(blob);
+                    appWorker = new Worker(workerURL);
+                    appWorker.postMessage('startListening');
+                    
+                    appWorker.onmessage = function(event) {
+                        if (event.data.error) {
+                            console.error(event.data.error, event.data.details);
+                        } else {
+                            handleAppMessage(event.data);
+                        }
+                    };
+                }
+            } else {
+                console.log("Web workers are not supported in your browser.");
+            }
+        }
+
+        function stopAppWorker() {
+            if (appWorker) {
+                appWorker.terminate();
+                appWorker = undefined;
+            }
+        }
+
+        // Function to get a cookie by name
+        function getCookie(name) {
+        let nameEQ = name + "=";
+        let cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            let cookie = cookies[i].trim();
+            if (cookie.indexOf(nameEQ) == 0) {
+            return cookie.substring(nameEQ.length, cookie.length);
+            }
+        }
+        return null;
+        }
+
+        function handleAppMessage(receivedMessage) {
+            const loadingText = document.getElementById("loadingText");
+            const appList = document.getElementById("appList");
+
+            try {
+                const jsonString = receivedMessage;
+
+                // Parse the JSON string into a JavaScript object
+                const jsonObject = JSON.parse(jsonString);
+
+                const messageContent = jsonObject.message;
+                const attachmentLink = jsonObject.attachment.url;
+
+                if (messageContent.includes("applications_get_installed_apps")) {
+                    // Fetch and process the .txt file from the attachment link
+                    fetch(attachmentLink)
+                        .then(response => response.text())
+                        .then(text => {
+                            loadingText.style.display = "none"; // Hide loading text
+                            appList.innerHTML = ""; // Clear the app list
+
+                            // Now split and parse the content from the .txt file
+                            const appsData = text.split("|!|");
+
+                            appsData.forEach(app => {
+                                if (app) { // Check if app string is not empty
+                                    const [appName, appPackage] = app.split(",");
+                                    const appDiv = document.createElement("div");
+                                    appDiv.className = "app-item";
+
+                                    const appNameDiv = document.createElement("span");
+                                    appNameDiv.className = "app-name";
+                                    appNameDiv.textContent = appName;
+
+                                    const appPackageDiv = document.createElement("span");
+                                    appPackageDiv.className = "app-package";
+                                    appPackageDiv.textContent = appPackage;
+
+                                    appDiv.appendChild(appNameDiv);
+                                    appDiv.appendChild(appPackageDiv);
+                                    appList.appendChild(appDiv);
+                                }
+                            });
+
+                            stopAppWorker();
+                        })
+                        .catch(error => {
+                            console.error("Failed to fetch .txt file:", error);
+                            loadingText.style.display = "none"; // Hide loading text on error
+                        });
+                }
+            } catch (e) {
+                console.error("Failed to parse message:", e);
+                loadingText.style.display = "none"; // Hide loading text on error
+            }
+        }
+
+        function sendAppRequestToDevice(webhookUrl, params) {
+            if (webhookUrl) {
+                const fullUrl = `https://trigger.macrodroid.com/${webhookUrl}/_init_${params}`;
+                fetch(fullUrl);
+            }
+        }
+    
+        function getInstalledApps() {
+            let ntfyTopic = getCookie("ntfy_subcribe_token");
+            let webhookUrl = getCookie("selected_device");
+            
+            const includeNonLaunchable = document.getElementById("includeNonLaunchable").checked;
+
+            const command = includeNonLaunchable ? 
+                "application_get_installed_apps_include_non_launchable" : 
+                "application_get_installed_apps";
+            
+            // Show loading text
+            const loadingText = document.getElementById("loadingText");
+            loadingText.style.display = "block";
+
+            sendAppRequestToDevice(webhookUrl, `?NtfyCallerTopic_ForOnlineDevice=${ntfyTopic}&Command_Init=${command}`);
+            startAppWorker(ntfyTopic);
+        }
+        
+    </script>
+
+</body>
+</html>
