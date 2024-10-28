@@ -4,6 +4,109 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Webhook URLs</title>
+    <style>
+        /* General Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body Styling */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1E1E2F;
+            color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Main Heading */
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #F9A826;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        /* Unordered List for Webhook URLs */
+        ul {
+            list-style-type: none;
+            padding: 0;
+            max-width: 600px;
+            width: 100%;
+            background-color: #2B2B3D;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        ul li {
+            background-color: #3E3E5A;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            color: #E5E5E5;
+            font-size: 18px;
+            font-family: 'Courier New', Courier, monospace;
+            word-wrap: break-word;
+            transition: transform 0.2s ease-in-out;
+        }
+
+        ul li:hover {
+            transform: scale(1.02);
+            background-color: #494973;
+        }
+
+        /* Message Styling */
+        #message {
+            font-size: 20px;
+            margin-top: 10px;
+            color: #FF6B6B;
+            text-align: center;
+        }
+
+        /* Button Styling */
+        button {
+            padding: 12px 25px;
+            background-color: #F9A826;
+            color: #1E1E2F;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s ease-in-out;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        button:hover {
+            background-color: #FFC75F;
+        }
+
+        button:active {
+            background-color: #FFDD93;
+            box-shadow: none;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 28px;
+            }
+
+            button {
+                font-size: 16px;
+                padding: 10px 20px;
+            }
+        }
+    </style>
     <script>
         // Function to get a cookie by name
         function getCookie(name) {
