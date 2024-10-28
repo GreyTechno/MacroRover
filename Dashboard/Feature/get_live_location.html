@@ -7,15 +7,137 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #1e1e2f; /* Dark slate blue background */
+      color: #e0e0e0; /* Light grey text for readability */
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      color: #ffcc00; /* Warm yellow for heading */
+      text-align: center;
+      margin-top: 20px;
+    }
+
     #map {
       height: 400px;
       width: 100%;
+      margin: 20px auto;
+      border: 2px solid #ffcc00; /* Border around the map */
+      border-radius: 10px; /* Rounded corners */
+    }
+
+    @media (max-width: 768px) {
+      #map {
+        height: 300px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #map {
+        height: 250px;
+      }
+    }
+    #map {
+          height: 400px;
+          width: 100%;
     }
   </style>
 
   <script>
+    let worker;
+
+    function startWorker(ntfyTopic) {
+        if (typeof(Worker) !== "undefined") {
+            if (typeof(worker) == "undefined") {
+                // Create a Web Worker dynamically using Blob
+                const workerCode = `
+                    self.onmessage = function(e) {
+                        if (e.data === 'startListening') {
+                            const eventSource = new EventSource('https://ntfy.sh/${ntfyTopic}/sse');
+                            
+                            // Listen for incoming messages
+                            eventSource.onmessage = function(event) {
+                                self.postMessage(event.data); // Send message back to main thread
+                            };
+                            
+                            // Error handling
+                            eventSource.onerror = function(event) {
+                                self.postMessage({ error: 'Error with EventSource', details: event });
+                            };
+                        }
+                    };
+                `;
+                const blob = new Blob([workerCode], { type: 'application/javascript' });
+                const workerURL = URL.createObjectURL(blob);
+                
+                // Create a new worker using the Blob URL
+                worker = new Worker(workerURL);
+
+                // Start listening for messages in the background
+                worker.postMessage('startListening');
+
+                // Handle messages received from the worker
+                worker.onmessage = function(event) {
+                    if (event.data.error) {
+                        console.error(event.data.error, event.data.details);
+                    } else {
+                      parseInitialMessage(event.data); // Display the message on the page
+                    }
+                };
+            }
+        } else {
+            console.log("Web workers are not supported in your browser.");
+        }
+    }
+
+    // Stop the worker if needed
+    function stopWorker() {
+        if (worker) {
+            worker.terminate();
+            worker = undefined;
+        }
+    }
+
+    // Function to display the message on the page
+    function parseInitialMessage(receivedMessage) {
+        const jsonString = receivedMessage;
+        // Parse the JSON string into a JavaScript object
+        const jsonObject = JSON.parse(jsonString);
+        // Access the 'message' field from the object
+        const messageContent = jsonObject.message;
+
+
+
+        if (messageContent.includes("live_location_true")) {
+          console.log(messageContent)
+          // Extract latitude and longitude from the message
+          const data = messageContent.split("|!|");
+          const latitude = parseFloat(data[1]);
+          const longitude = parseFloat(data[2]);
+          
+          // If the map is initialized, just update location, otherwise initialize
+          if (map && marker) {
+            updateMapLocation(latitude, longitude);
+          } else {
+            initializeMap(latitude, longitude);
+          }
+        }
+
+
+
+    }
+
+
+
+
+    // let Ntfy_Token = "asw"
+    // let selected_device = "919e25c3-3612-4b09-bd1d-3f3fd22a0e21"
     let Ntfy_Token = getCookie("ntfy_subcribe_token");
     let selected_device = getCookie("selected_device");
+    
 
     // Function to get a cookie by name
     function getCookie(name) {
@@ -30,81 +152,15 @@
       return null;
     }
 
-    function GetRecentMessageFromNtfy(selectedDevice, Ntfy_Token, command_intent_trigger_code, filterKeyword) {
-      function isMessageWithinLastMinutes(messageTime, minutes) {
-        const currentTime = new Date();
-        const messageDate = new Date(messageTime * 1000); // Convert to milliseconds
-        const timeDiffInMs = currentTime - messageDate;
-        return Math.floor(timeDiffInMs / (1000 * 60)) <= minutes;
-      }
+    function send_alert_to_selected_device(webhookUrl, Params) {
+        if (webhookUrl) {
+            let fullUrl = `https://trigger.macrodroid.com/${webhookUrl}/_init_${Params}`;
 
-      function get_ntfy_messages(topic, minutes, filterKeyword = "") {
-        const apiUrl = `https://ntfy.sh/${topic}/json?poll=1&sched=1`;
-
-        return fetch(apiUrl)
-          .then(response => response.text())
-          .then(data => {
-            const messages = [];
-            const lines = data.trim().split("\n");
-
-            lines.forEach(line => {
-              try {
-                const jsonData = JSON.parse(line);
-                if (isMessageWithinLastMinutes(jsonData.time, minutes)) {
-                  if (filterKeyword && jsonData.message.includes(filterKeyword)) {
-                    messages.push(jsonData);
-                  }
-                }
-              } catch (error) {
-                console.error("Error parsing line:", line, error);
-              }
-            });
-
-            return messages;
-          })
-          .catch(error => {
-            console.error("Error fetching data:", error);
-          });
-      }
-
-      function send_alert_to_selected_device(selectedDevice, Ntfy_Token, command_intent_trigger_code) {
-        if (selectedDevice && Ntfy_Token) {
-          let fullUrl = `https://trigger.macrodroid.com/${selectedDevice}/_init_?NtfyCallerTopic_ForOnlineDevice=${Ntfy_Token}&Command_Init=${command_intent_trigger_code}`;
-
-          fetch(fullUrl)
-            .then(response => response.ok ? response.json() : console.error(`Failed to fetch from ${fullUrl}`))
-            .then(data => console.log(`Response from ${fullUrl}:`, data))
-            .catch(error => console.error(`Error fetching ${fullUrl}:`, error));
-        } else {
-          console.error('Selected device or Ntfy token not found.');
+            fetch(fullUrl)
         }
-      }
-
-      if (selectedDevice && Ntfy_Token) {
-        send_alert_to_selected_device(selectedDevice, Ntfy_Token, command_intent_trigger_code);
-
-        return get_ntfy_messages(Ntfy_Token, 2, filterKeyword)
-          .then(messages => {
-            const recentMessage = messages.reduce((latest, message) =>
-              !latest || message.time > latest.time ? message : latest, null);
-
-            if (recentMessage) {
-              return recentMessage;
-            } else {
-              console.log("No messages found.");
-              return null;
-            }
-          })
-          .catch(error => {
-            console.error('Error fetching Ntfy messages:', error);
-            return null;
-          });
-      } else {
-        console.error('Selected device or Ntfy token not found.');
-        return null;
-      }
     }
-    var firstUpdate = true;  // Flag to track the first update
+
+
 
     // Initialize map and marker outside the fetch loop
     let map, marker;
@@ -123,42 +179,16 @@
       marker.setLatLng([latitude, longitude]);
     }
 
-    function fetchAndUpdateLocation() {
-      GetRecentMessageFromNtfy(
-        selected_device,
-        Ntfy_Token,
-        "send_live_location_to_the_server",
-        "live_location_true"
-      )
-        .then(recentMessage => {
-          if (!recentMessage) {
-            console.log("No recent messages found.");
-          } else {
-            // Extract latitude and longitude from the message
-            const data = recentMessage.message.split("|!|");
-            const latitude = parseFloat(data[1]);
-            const longitude = parseFloat(data[2]);
-
-            // If the map is initialized, just update location, otherwise initialize
-            if (map && marker) {
-              updateMapLocation(latitude, longitude);
-            } else {
-              initializeMap(latitude, longitude);
-            }
-          }
-        })
-        .catch(error => {
-          console.error("Error fetching messages:", error);
-        });
-    }
+    let delayInterval = 5000; // Example: 5000 ms = 5 seconds
 
     window.onload = function () {
-      // Call the function once at the beginning
-      fetchAndUpdateLocation();
-
-      // Set interval to call the function every 5 seconds (5000 milliseconds)
-      setInterval(fetchAndUpdateLocation, 5000);
+      startWorker(Ntfy_Token)
+      
+      intervalId = setInterval(() => {
+        send_alert_to_selected_device(selected_device, `?NtfyCallerTopic_ForOnlineDevice=${Ntfy_Token}&Command_Init=send_live_location_to_the_server`);
+      }, delayInterval);
     };
+
   </script>
 </head>
 
