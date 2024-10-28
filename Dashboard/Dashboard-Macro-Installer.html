@@ -4,9 +4,73 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Macro Installer</title>
+    <style>
+        /* General reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #f1f1f1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #ffcc00;
+        }
+
+        /* User ID Section */
+        #userIdSection {
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* Buttons */
+        button {
+            background-color: #ffcc00;
+            color: #121212;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #ffd966;
+        }
+
+        /* Instruction list */
+        ol {
+            list-style-type: decimal;
+            margin-top: 20px;
+            padding-left: 40px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>No webhook URL found</h1>
+    <h1>No Webhook URL Found</h1>
 
     <div id="userIdSection">
         <p>User ID: <span id="userIdDisplay">No User ID</span></p>
@@ -14,7 +78,7 @@
         <button id="dashboardButton" onclick="open_dashboard()">Go to Dashboard</button>
     </div>
 
-    <p>Hey man, finally I built this shit ! Now try it and follow these steps:
+    <p>Hey man, finally I built this shit! Now try it and follow these steps:
         <ol>
             <li>Import that Macro</li>
             <li>Enable it</li>
@@ -66,8 +130,6 @@
                 tempInput.select();
                 try {
                     document.execCommand('copy');
-                    alert('user id copy hoo gaya jaa khush rah aaur sunn jaa kr paste krde input feild ma samjha');
-                    alert('aaur haan itna jaldi kiya hai paste krne kai baad 5 sec rukega, okay');
                 } catch (err) {
                     alert('Failed to copy User ID (fallback).');
                 }
@@ -77,7 +139,6 @@
 
         // Function to go to the dashboard page
         function open_dashboard() {
-            alert('dashboard me jaa kr check kr user id iya yaa nhi');
             window.location.href = "https://greytechno.github.io/MacroRover/"; // Change to the actual dashboard URL
         }
     </script>
