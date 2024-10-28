@@ -1,9 +1,123 @@
+
+
+
+
+
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Online Devices</title>
+    <style>
+        /* General Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body Styling */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1E1E2C;
+            color: #ECECEC;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* Main Heading */
+        h1 {
+            font-size: 32px;
+            color: #FFCC00;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Device Status List */
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        ul li {
+            background-color: #2D2D3A;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #ECECEC;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        ul li:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        ul li button {
+            background-color: #FFCC00;
+            color: #1E1E2C;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        ul li button:hover {
+            background-color: #FFC75F;
+            transform: translateY(-2px);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 24px;
+            }
+
+            ul li button {
+                padding: 8px 15px;
+                font-size: 14px;
+            }
+        }
+
+        /* Scrollable list for overflow */
+        ul {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        ul::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ul::-webkit-scrollbar-track {
+            background-color: #2D2D3A;
+        }
+
+        ul::-webkit-scrollbar-thumb {
+            background-color: #FFCC00;
+            border-radius: 4px;
+        }
+    </style>
     <script>
 
         let Ntfy_Token = getCookie("ntfy_subcribe_token");
@@ -191,7 +305,6 @@
 
                                 if (OnlineDevicesUUID.length >= targetDeviceCount) {
                                     clearInterval(intervalId);
-                                    alert(`Found required number of devices: ${OnlineDevicesUUID.join(", ")}`);
                                     displayDevices();
                                 }
                             });
